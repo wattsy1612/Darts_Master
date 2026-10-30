@@ -2,6 +2,10 @@
 
 The start of a universal darts platform: manual scoring now; supported automatic scoring integrations, online match rooms, teams, tournaments and streaming planned. The final product name is undecided.
 
+## Product and delivery plan
+
+See the [full implementation plan](docs/IMPLEMENTATION_PLAN.md), [UI/UX and brand brief](docs/DESIGN_BRIEF.md), [feature backlog](docs/FEATURE_BACKLOG.md) and [roadmap overview](docs/ROADMAP.md). These separate current v0.5 behaviour from the complete platform vision and define dependencies and release gates.
+
 ## Run the app
 
 Use **Ubuntu / WSL**, not Windows PowerShell, for project commands. Node 24 LTS is required; the exact development version is recorded in `.nvmrc`.
