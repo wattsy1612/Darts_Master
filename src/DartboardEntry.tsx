@@ -32,6 +32,8 @@ function position(hit: DartHit, index: number) {
 
 export default function DartboardEntry({
   remaining,
+  hits,
+  onHitsChange: setHits,
   disabled,
   onRecord,
   error,
@@ -39,13 +41,14 @@ export default function DartboardEntry({
   playerName,
 }: {
   remaining: number;
+  hits: DartHit[];
+  onHitsChange: (hits: DartHit[]) => void;
   disabled: boolean;
   onRecord: (visit: Visit) => void;
   error: string;
   waitingForOpponent?: boolean;
   playerName?: string;
 }) {
-  const [hits, setHits] = useState<DartHit[]>([]);
   const [precision, setPrecision] = useState(false);
   const [multiplier, setMultiplier] = useState<1 | 2 | 3>(1);
   const [hover, setHover] = useState('');

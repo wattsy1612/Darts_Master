@@ -2,9 +2,9 @@
 
 The active goal covers the complete [implementation plan](IMPLEMENTATION_PLAN.md), [design brief](DESIGN_BRIEF.md) and all 83 items in the [feature backlog](FEATURE_BACKLOG.md). Status is evidence-based: an existing prototype feature or a partial implementation is not a completed public-release workstream.
 
-## Current increment — v0.7
+## Current increment — v0.8
 
-Transactional IndexedDB saves now preserve current matches, results and profiles together, migrate readable legacy saves without deleting originals, and reject stale-tab overwrites. Data & backups adds validated import previews, explicit profile linking, duplicate/conflict handling and atomic recovery. Draft/offline behaviour, configurable retention and cloud sync remain incomplete. See [data evidence](evidence/DATA_2026-10-30.md). The preceding compact-workspace changes remain documented in [workspace evidence](evidence/WORKSPACE_2026-10-30.md).
+Exact-turn, tab-local visit drafts now survive refresh with explicit restore/discard. The built app precaches its public shell, reopens offline, and waits for all app tabs to close before activating an update. Production-build browser checks cover disconnected play, recovery, multi-tab updates and failed installations. See [draft/offline evidence](evidence/OFFLINE_2026-10-30.md). These are implementation steps, not full platform acceptance. The preceding [data reliability](evidence/DATA_2026-10-30.md) and [compact workspace](evidence/WORKSPACE_2026-10-30.md) increments remain in place.
 
 ## Product decisions and external evidence
 
@@ -51,7 +51,7 @@ Transactional IndexedDB saves now preserve current matches, results and profiles
 | PL-04 | Account profile, avatar and privacy                 | Not started        | Baseline: Planned / private online beta. Next gate: Ownership, public handle and private contact data separated                                               |
 | SY-01 | Persistence boundary and versioned local migrations | In progress        | Baseline: Planned / local alpha. Recoverable migration and atomic IndexedDB writes tested; broader device/performance validation remains                      |
 | SY-02 | Import/export with validation and preview           | Existing / partial | Baseline: Planned; export existing / local alpha. Validated previews, duplicates, conflicts, limits and rollback tested; broader usability validation remains |
-| SY-03 | Draft recovery and offline/installable behaviour    | Not started        | Baseline: Planned / local alpha. Next gate: No stale draft is restored into another turn; interrupted updates tested                                          |
+| SY-03 | Draft recovery and offline/installable behaviour    | In progress        | Baseline: Planned / local alpha. Exact-turn restore and production offline/update tests pass; real device/install/eviction validation remains                 |
 | SY-04 | Data retention/backup/restore controls              | In progress        | Baseline: Planned / local alpha. Backup/restore and recovery implemented; configurable retention and lifecycle controls remain                                |
 | SY-05 | Cross-device sync and retry/conflict handling       | Not started        | Baseline: Planned / private online beta. Next gate: Idempotent upload and explicit conflict behaviour                                                         |
 | AC-01 | Identity-provider and ownership decision            | Not started        | Baseline: Planned / cloud foundation. Next gate: Decision record, account/profile/household role model                                                        |
@@ -105,7 +105,7 @@ Transactional IndexedDB saves now preserve current matches, results and profiles
 ## Next independent slices
 
 1. Validate compact workspace on real devices and with the owner; finish navigation/component foundations and accessibility gaps.
-2. Extend persistence to turn drafts and validate offline/update recovery.
+2. Validate offline/install behaviour on real devices and extend retention controls.
 3. Expand explicit rule/participant contracts while preserving current saved sessions.
 4. Run hardware and media/provider feasibility work when the necessary devices/access are available.
 

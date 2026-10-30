@@ -660,3 +660,37 @@
     display: none;
   }
 }
+
+.draft-save-status {
+  color: var(--color-ink-muted);
+  font-size: 0.75rem;
+  margin: 0.5rem 0;
+}
+.draft-recovery {
+  padding: 1rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
+  background: var(--color-surface-muted);
+}
+.draft-recovery p {
+  line-height: 1.5;
+}
+.draft-recovery .button {
+  margin: 0.5rem 0.75rem 0.5rem 0;
+}
+.offline-indicator {
+  display: block;
+  margin: 12px 24px 0;
+  font-size: 0.75rem;
+  color: var(--color-ink-muted);
+}
+.update-notice {
+  font-size: 0.75rem;
+  max-width: 24rem;
+  margin: 12px 24px 0;
+  line-height: 1.4;
+}
+
+.topbar {
+  flex-wrap: wrap;
+}

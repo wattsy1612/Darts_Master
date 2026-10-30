@@ -9,6 +9,9 @@ import { useRoute } from './useRoute';
 import ActionButton from './ui/ActionButton';
 import ComponentGallery from './ui/ComponentGallery';
 import DataManager from './DataManager';
+import { useVisitDraft } from './useVisitDraft';
+import { OfflineIndicator } from './OfflineSupport';
+import { turnIdentity } from './data/draft';
 import { browserRepository } from './data/repository';
 import type { LocalRepository } from './data/repository';
 import { matchId, readArchive, updateArchive } from './domain/archive';
@@ -97,9 +100,27 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
       return 'board';
     }
   });
-  const [score, setScore] = useState('');
-  const [darts, setDarts] = useState(3);
-  const [double, setDouble] = useState(false);
+  const match = useMemo(() => (session ? replay(session) : null), [session]);
+  const botTurn =
+    !!match?.setup.bot && match.turn === 1 && match.legWinner === null;
+  const visitDraft = useVisitDraft(
+    session,
+    saveState === 'saved' &&
+      !!session &&
+      !!repository.document.data.current &&
+      turnIdentity(session) === turnIdentity(repository.document.data.current),
+    !!match &&
+      match.legWinner === null &&
+      !botTurn &&
+      repository.mode === 'database',
+  );
+  const { score, darts, double } = visitDraft.value;
+  const setScore = (score: string) =>
+    visitDraft.update({ score, mode: entryMode });
+  const setDarts = (darts: number) =>
+    visitDraft.update({ darts, mode: entryMode });
+  const setDouble = (double: boolean) =>
+    visitDraft.update({ double, mode: entryMode });
   const [error, setError] = useState('');
   const [storageWarning, setStorageWarning] = useState(saved.warning);
   const [tab, setTab] = useRoute();
@@ -128,10 +149,12 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     window.addEventListener('keydown', exit);
     return () => window.removeEventListener('keydown', exit);
   }, [playing, focusMode]);
-  const match = useMemo(() => (session ? replay(session) : null), [session]);
-  const botTurn =
-    !!match?.setup.bot && match.turn === 1 && match.legWinner === null;
-  const entryBlocked = !match || match.legWinner !== null || botTurn;
+  const entryBlocked =
+    !match ||
+    match.legWinner !== null ||
+    botTurn ||
+    visitDraft.loading ||
+    !!visitDraft.recovery;
   const route = match ? checkoutRoute(match.scores[match.turn]) : null;
   const resultSaved =
     !!session && archives.some((entry) => entry.session.id === session.id);
@@ -405,12 +428,12 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.7</span>
+          Development build <span>v0.8</span>
         </div>
       </aside>
       <div className="main-shell">
         <header className="topbar">
-          <span>YOUR BOARD. YOUR GAME.</span>
+          <span className="topbar-tagline">YOUR BOARD. YOUR GAME.</span>
           <span className="local-badge">
             <span className="status-dot" />
             Local play
@@ -423,6 +446,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                 : 'Not saved'}
           </span>
         </header>
+        <OfflineIndicator />
         <main>
           <div className="page-heading">
             {playing && (
@@ -1040,170 +1064,231 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                       className="entry-panel panel"
                       aria-label="Score entry"
                     >
-                      <div
-                        className="input-mode-switch"
-                        role="group"
-                        aria-label="Score entry method"
-                      >
-                        {(['board', 'keypad'] as const).map((mode) => (
+                      {visitDraft.loading && (
+                        <p role="status">Checking this turn’s draft…</p>
+                      )}
+                      {visitDraft.recovery && (
+                        <div
+                          className="draft-recovery"
+                          role="region"
+                          aria-label="Unsubmitted visit recovery"
+                        >
+                          <h2>Pick up your unfinished visit?</h2>
+                          <p>
+                            A draft was saved for{' '}
+                            {match.setup.players[match.turn]} on this exact
+                            turn. It has not been recorded.
+                          </p>
                           <button
-                            key={mode}
-                            aria-pressed={entryMode === mode}
+                            className="button primary"
                             onClick={() => {
-                              setEntryMode(mode);
-                              setError('');
-                              try {
-                                localStorage.setItem(
-                                  'darts-master.input-mode',
-                                  mode,
-                                );
-                              } catch {
-                                /* The scoring method still works without persistence. */
-                              }
+                              setEntryMode(visitDraft.recovery!.mode);
+                              visitDraft.restore();
                             }}
                           >
-                            {mode === 'board' ? '◎ Dartboard' : '▦ Keypad'}
+                            Restore visit draft
                           </button>
-                        ))}
-                      </div>
-                      <div
-                        hidden={entryMode !== 'board'}
-                        className="dartboard-entry-container"
-                      >
-                        <DartboardEntry
-                          key={`${session?.id}-${session?.commands.length}`}
-                          remaining={match.scores[match.turn]}
-                          playerName={match.setup.players[match.turn]}
-                          waitingForOpponent={botTurn}
-                          disabled={entryBlocked}
-                          error={error}
-                          onRecord={(visit) => append({ type: 'visit', visit })}
-                        />
-                      </div>
-                      <div
-                        hidden={entryMode !== 'keypad'}
-                        className="keypad-entry"
-                      >
-                        <div className="section-label">YOUR VISIT</div>
-                        <h2>
-                          {botTurn
-                            ? 'Opponent’s turn'
-                            : match.legWinner !== null
-                              ? 'Nicely thrown.'
-                              : 'What did you hit?'}
-                        </h2>
-                        <fieldset disabled={entryBlocked}>
-                          <legend className="sr-only">Enter visit score</legend>
-                          <label className="score-label" htmlFor="visit-score">
-                            Visit total
-                          </label>
-                          <input
-                            id="visit-score"
-                            className="score-input"
-                            value={score}
-                            inputMode="numeric"
-                            autoComplete="off"
-                            placeholder="0"
-                            onChange={(e) =>
-                              input(e.target.value.replace(/\D/g, ''))
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                submit();
-                              }
-                            }}
-                          />
-                          <div className="quick-scores">
-                            {[26, 60, 100, 140, 180].map((n) => (
-                              <button key={n} onClick={() => input(String(n))}>
-                                {n}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="keypad">
-                            {[
-                              '1',
-                              '2',
-                              '3',
-                              '4',
-                              '5',
-                              '6',
-                              '7',
-                              '8',
-                              '9',
-                              'C',
-                              '0',
-                              '⌫',
-                            ].map((key) => (
-                              <button
-                                key={key}
-                                aria-label={
-                                  key === 'C'
-                                    ? 'Clear score'
-                                    : key === '⌫'
-                                      ? 'Delete last digit'
-                                      : key
+                          <button
+                            className="text-button"
+                            onClick={visitDraft.discard}
+                          >
+                            Discard visit draft
+                          </button>
+                        </div>
+                      )}
+                      {visitDraft.notice && (
+                        <p className="notice" role="status">
+                          {visitDraft.notice}
+                        </p>
+                      )}
+                      {visitDraft.status && (
+                        <p className="draft-save-status" role="status">
+                          {visitDraft.status}
+                        </p>
+                      )}
+                      <div hidden={visitDraft.loading || !!visitDraft.recovery}>
+                        <div
+                          className="input-mode-switch"
+                          role="group"
+                          aria-label="Score entry method"
+                        >
+                          {(['board', 'keypad'] as const).map((mode) => (
+                            <button
+                              key={mode}
+                              aria-pressed={entryMode === mode}
+                              onClick={() => {
+                                setEntryMode(mode);
+                                visitDraft.update({ mode });
+                                setError('');
+                                try {
+                                  localStorage.setItem(
+                                    'darts-master.input-mode',
+                                    mode,
+                                  );
+                                } catch {
+                                  /* The scoring method still works without persistence. */
                                 }
-                                onClick={() =>
-                                  input(
+                              }}
+                            >
+                              {mode === 'board' ? '◎ Dartboard' : '▦ Keypad'}
+                            </button>
+                          ))}
+                        </div>
+                        <div
+                          hidden={entryMode !== 'board'}
+                          className="dartboard-entry-container"
+                        >
+                          <DartboardEntry
+                            key={`${session?.id}-${session?.commands.length}`}
+                            hits={visitDraft.value.hits}
+                            onHitsChange={(hits) =>
+                              visitDraft.update({ hits, mode: 'board' })
+                            }
+                            remaining={match.scores[match.turn]}
+                            playerName={match.setup.players[match.turn]}
+                            waitingForOpponent={botTurn}
+                            disabled={entryBlocked}
+                            error={error}
+                            onRecord={(visit) =>
+                              append({ type: 'visit', visit })
+                            }
+                          />
+                        </div>
+                        <div
+                          hidden={entryMode !== 'keypad'}
+                          className="keypad-entry"
+                        >
+                          <div className="section-label">YOUR VISIT</div>
+                          <h2>
+                            {botTurn
+                              ? 'Opponent’s turn'
+                              : match.legWinner !== null
+                                ? 'Nicely thrown.'
+                                : 'What did you hit?'}
+                          </h2>
+                          <fieldset disabled={entryBlocked}>
+                            <legend className="sr-only">
+                              Enter visit score
+                            </legend>
+                            <label
+                              className="score-label"
+                              htmlFor="visit-score"
+                            >
+                              Visit total
+                            </label>
+                            <input
+                              id="visit-score"
+                              className="score-input"
+                              value={score}
+                              inputMode="numeric"
+                              autoComplete="off"
+                              placeholder="0"
+                              onChange={(e) =>
+                                input(e.target.value.replace(/\D/g, ''))
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  submit();
+                                }
+                              }}
+                            />
+                            <div className="quick-scores">
+                              {[26, 60, 100, 140, 180].map((n) => (
+                                <button
+                                  key={n}
+                                  onClick={() => input(String(n))}
+                                >
+                                  {n}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="keypad">
+                              {[
+                                '1',
+                                '2',
+                                '3',
+                                '4',
+                                '5',
+                                '6',
+                                '7',
+                                '8',
+                                '9',
+                                'C',
+                                '0',
+                                '⌫',
+                              ].map((key) => (
+                                <button
+                                  key={key}
+                                  aria-label={
                                     key === 'C'
-                                      ? ''
+                                      ? 'Clear score'
                                       : key === '⌫'
-                                        ? score.slice(0, -1)
-                                        : score + key,
-                                  )
+                                        ? 'Delete last digit'
+                                        : key
+                                  }
+                                  onClick={() =>
+                                    input(
+                                      key === 'C'
+                                        ? ''
+                                        : key === '⌫'
+                                          ? score.slice(0, -1)
+                                          : score + key,
+                                    )
+                                  }
+                                >
+                                  {key}
+                                </button>
+                              ))}
+                            </div>
+                            <label className="darts-select">
+                              Darts thrown
+                              <select
+                                value={darts}
+                                onChange={(e) =>
+                                  setDarts(Number(e.target.value))
                                 }
                               >
-                                {key}
-                              </button>
-                            ))}
-                          </div>
-                          <label className="darts-select">
-                            Darts thrown
-                            <select
-                              value={darts}
-                              onChange={(e) => setDarts(Number(e.target.value))}
-                            >
-                              {[1, 2, 3].map((n) => (
-                                <option key={n} value={n}>
-                                  {n}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          {finishing && (
-                            <label className="double-confirm">
-                              <input
-                                type="checkbox"
-                                checked={double}
-                                onChange={(e) => setDouble(e.target.checked)}
-                              />
-                              Last dart was a double / bull
+                                {[1, 2, 3].map((n) => (
+                                  <option key={n} value={n}>
+                                    {n}
+                                  </option>
+                                ))}
+                              </select>
                             </label>
-                          )}
-                          {error && (
-                            <p className="error" role="alert">
-                              {error}
-                            </p>
-                          )}
-                          {finishing && !double && (
-                            <p className="entry-hint">
-                              Confirm the finishing double, or this visit is a
-                              bust.
-                            </p>
-                          )}
-                          <button
-                            className="button primary submit-score"
-                            disabled={!score}
-                            onClick={submit}
-                          >
-                            Record score <span>↵</span>
-                          </button>
-                        </fieldset>
-                        <p className="keyboard-hint">
-                          Your keyboard works here, too.
-                        </p>
+                            {finishing && (
+                              <label className="double-confirm">
+                                <input
+                                  type="checkbox"
+                                  checked={double}
+                                  onChange={(e) => setDouble(e.target.checked)}
+                                />
+                                Last dart was a double / bull
+                              </label>
+                            )}
+                            {error && (
+                              <p className="error" role="alert">
+                                {error}
+                              </p>
+                            )}
+                            {finishing && !double && (
+                              <p className="entry-hint">
+                                Confirm the finishing double, or this visit is a
+                                bust.
+                              </p>
+                            )}
+                            <button
+                              className="button primary submit-score"
+                              disabled={!score}
+                              onClick={submit}
+                            >
+                              Record score <span>↵</span>
+                            </button>
+                          </fieldset>
+                          <p className="keyboard-hint">
+                            Your keyboard works here, too.
+                          </p>
+                        </div>
                       </div>
                     </section>
                   </div>

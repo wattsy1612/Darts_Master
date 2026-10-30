@@ -30,7 +30,9 @@ The intended differentiators are a clear playing experience, reliable scoring, c
 
 These assumptions guide discovery; they do not authorise spending, signing commercial agreements or making provider commitments.
 
-## 2. Current implementation and gaps
+## 2. Planning baseline and gaps
+
+This table records the v0.5 planning baseline. Follow the [delivery ledger](DELIVERY_STATUS.md) for later implemented increments and outstanding acceptance gates.
 
 | Area                                 | Present in v0.5                                                                   | Remaining work                                                                                        |
 | ------------------------------------ | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
@@ -46,7 +48,7 @@ These assumptions guide discovery; they do not authorise spending, signing comme
 
 At the baseline, 67 domain tests and 21 browser tests pass. The application remains a development build; passing these tests is not evidence of production readiness. The active implementation is on `codex/app-foundation` in PR #1, not yet merged to `main`.
 
-Current limitations to preserve in planning: unrecorded draft darts are not recovered after refresh; browser data can be removed; guest names do not establish identity; retained profile records cover only linked completed matches in the current archive; there is no server-owned referee or cloud account.
+Remaining limitations to preserve in planning: browser data can be removed; guest names do not establish identity; retained profile records cover only linked completed matches in the current archive; there is no server-owned referee or cloud account.
 
 ## 3. People and permissions
 
@@ -66,15 +68,15 @@ An account, a player profile, a team and a physical board are separate entities.
 
 ## 4. Release definitions
 
-| Release                         | What a user can do                                                                                                                                             | Exit condition                                                                  |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Local alpha                     | Play, practise, keep and restore results with a coherent interface                                                                                             | Local reliability, backup/import and core UX gates pass                         |
-| Connected alpha                 | Pair a tested board input and complete games with corrections                                                                                                  | Hardware and adapter conformance pass; manual fallback remains available        |
-| Private online beta             | Register, migrate chosen local data and play an invited opponent                                                                                               | Account, authoritative scoring, permissions and reconnect gates pass            |
-| Club beta                       | Run team sessions, an initial tournament and private video matches                                                                                             | Organiser/referee workflows, moderation and media recovery pass                 |
+| Release                         | What a user can do                                                                                                                                                       | Exit condition                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| Local alpha                     | Play, practise, keep and restore results with a coherent interface                                                                                                       | Local reliability, backup/import and core UX gates pass                         |
+| Connected alpha                 | Pair a tested board input and complete games with corrections                                                                                                            | Hardware and adapter conformance pass; manual fallback remains available        |
+| Private online beta             | Register, migrate chosen local data and play an invited opponent                                                                                                         | Account, authoritative scoring, permissions and reconnect gates pass            |
+| Club beta                       | Run team sessions, an initial tournament and private video matches                                                                                                       | Organiser/referee workflows, moderation and media recovery pass                 |
 | Public v1                       | Serve home/remote players, clubs/venues, teams, league and tournament organisers, and spectators with the confirmed scoring, account, competition and media capabilities | Public-release checklist passes; compatibility and service limits are published |
-| Expanded platform               | Additional games/providers, advanced leagues/rankings, richer training/replays and optional commercial features                                                | Each expansion passes its own evidence and cost gate                            |
-| Detection / appliance programme | Evaluate independent scoring and compact hardware                                                                                                              | Separately validated accuracy, rights, hardware and support case                |
+| Expanded platform               | Additional games/providers, advanced leagues/rankings, richer training/replays and optional commercial features                                                          | Each expansion passes its own evidence and cost gate                            |
+| Detection / appliance programme | Evaluate independent scoring and compact hardware                                                                                                                        | Separately validated accuracy, rights, hardware and support case                |
 
 Owner clarification: the first polished public release is for all of these audiences. Alpha/beta milestones are internal validation stages, not approval to launch a cut-down single-audience product. Full registration is later in development order, but belongs in that public release.
 
@@ -367,21 +369,21 @@ Some work can overlap, especially design and hardware discovery, but dependencie
 
 ## 11. Decisions and risk register
 
-| Decision / risk                                                   | Needed by                                 | How it is resolved                                                                                        |
-| ----------------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Primary users: home players, online community or venue/club first | A                                         | Owner confirmed all audiences for the first polished release; test all core role journeys and sequence their technical dependencies                          |
-| Final name and identity                                           | Before public launch                      | Real darts-led naming shortlist, availability screens and visual testing; no invented availability claims |
-| Paid/free boundaries and budget                                   | Before provider commitments/public launch | Measure expected identity, database, relay and recording costs; decide commercial scope                   |
-| Account/profile/household ownership and guest claiming            | D                                         | Explicit data and permission model with migration prototype                                               |
-| Supported provider access and commercial terms                    | C / adapter release                       | Current official interface evidence, permissions and a real integration test                              |
-| Native capture vs browser/provider capture                        | C                                         | Windows/WSL and camera ownership benchmark, not assumptions                                               |
-| Authoritative corrections and disputed results                    | E                                         | Match policy prototypes and event replay tests                                                            |
-| Team/organiser/referee roles                                      | F/G                                       | Permission matrix and actual match-night/event trial                                                      |
-| Video cost, network reliability and camera contention             | Early H spike                             | Different-network tests and bounded relay/recording measurements                                          |
-| Statistics completeness and trust                                 | Before public stats/rankings              | Provenance-aware metrics; distinguish unavailable detail from zero                                        |
-| Privacy, age, public chat and recording defaults                  | Before public online/media release        | Product policy decisions and appropriate review                                                           |
-| Long-term storage and data portability                            | B/D                                       | Versioned backup/import, sync, retention choices and restore test                                         |
-| Scope expanding faster than reliability                           | Every milestone                           | Freeze a release slice, keep later work in backlog and require exit evidence                              |
+| Decision / risk                                                   | Needed by                                 | How it is resolved                                                                                                                  |
+| ----------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Primary users: home players, online community or venue/club first | A                                         | Owner confirmed all audiences for the first polished release; test all core role journeys and sequence their technical dependencies |
+| Final name and identity                                           | Before public launch                      | Real darts-led naming shortlist, availability screens and visual testing; no invented availability claims                           |
+| Paid/free boundaries and budget                                   | Before provider commitments/public launch | Measure expected identity, database, relay and recording costs; decide commercial scope                                             |
+| Account/profile/household ownership and guest claiming            | D                                         | Explicit data and permission model with migration prototype                                                                         |
+| Supported provider access and commercial terms                    | C / adapter release                       | Current official interface evidence, permissions and a real integration test                                                        |
+| Native capture vs browser/provider capture                        | C                                         | Windows/WSL and camera ownership benchmark, not assumptions                                                                         |
+| Authoritative corrections and disputed results                    | E                                         | Match policy prototypes and event replay tests                                                                                      |
+| Team/organiser/referee roles                                      | F/G                                       | Permission matrix and actual match-night/event trial                                                                                |
+| Video cost, network reliability and camera contention             | Early H spike                             | Different-network tests and bounded relay/recording measurements                                                                    |
+| Statistics completeness and trust                                 | Before public stats/rankings              | Provenance-aware metrics; distinguish unavailable detail from zero                                                                  |
+| Privacy, age, public chat and recording defaults                  | Before public online/media release        | Product policy decisions and appropriate review                                                                                     |
+| Long-term storage and data portability                            | B/D                                       | Versioned backup/import, sync, retention choices and restore test                                                                   |
+| Scope expanding faster than reliability                           | Every milestone                           | Freeze a release slice, keep later work in backlog and require exit evidence                                                        |
 
 ## 12. How this plan stays current
 

@@ -4,7 +4,7 @@ The start of a universal darts platform: manual scoring now; supported automatic
 
 ## Product and delivery plan
 
-See the [full implementation plan](docs/IMPLEMENTATION_PLAN.md), [UI/UX and brand brief](docs/DESIGN_BRIEF.md), [feature backlog](docs/FEATURE_BACKLOG.md) and [roadmap overview](docs/ROADMAP.md). These separate current v0.5 behaviour from the complete platform vision and define dependencies and release gates.
+See the [full implementation plan](docs/IMPLEMENTATION_PLAN.md), [UI/UX and brand brief](docs/DESIGN_BRIEF.md), [feature backlog](docs/FEATURE_BACKLOG.md) and [roadmap overview](docs/ROADMAP.md). These separate the planning baseline from the complete platform vision and define dependencies and release gates.
 
 Track current goal progress in the [delivery ledger](docs/DELIVERY_STATUS.md).
 
@@ -46,14 +46,22 @@ Open **http://localhost:5173** in a browser on the Dell. When working from anoth
 - Compact playing layouts with reachable record controls on reference laptop and phone screens.
 - Focus mode with Escape exit and remembered preference.
 - Page URLs with refresh and browser back/forward navigation.
+- Exact-turn draft recovery, isolated between tabs.
+- Offline reopen and install metadata in production builds, with updates held until all app tabs close.
 
-Board entry is the default for new installations; use the **Dartboard / Keypad** switch to choose and save your preferred input method. Board visits are recorded only after confirmation, so you can correct a misplaced tap first. Unrecorded draft darts are not saved across a refresh.
+Board entry is the default for new installations; use the **Dartboard / Keypad** switch to choose and save your preferred input method. Board visits are recorded only after confirmation, so you can correct a misplaced tap first. Unsubmitted board darts and keypad details are saved separately for this tab. On refresh, a matching draft is offered for explicit restore or discard; it never records a visit by itself. Drafts expire after seven days and are excluded from full match backups. Closing a tab may remove its draft link, so record a visit before closing it.
 
 Practice opponents generate individual darts with different hit/miss probabilities; difficulty names are not guaranteed averages or ratings. They follow the same bust and double-out rules as human players. Opponent throws pause while viewing history or editing setup. Saved match positions produce repeatable opponent throws, so refresh and correction do not reroll a score.
 
 Saved players are local profiles, not registered accounts. Select a saved player before starting a game to link that result; guest matches are not automatically attached by matching names. Profile statistics use the latest 100 completed matches retained in this browser.
 
 The current match, saved players and latest 100 completed matches stay in this browser’s IndexedDB database. Older local-storage saves migrate automatically while their original copies are preserved. Starting a new match replaces an unfinished game only after confirmation; completed results remain in history. Use Data & backups to download a full backup or review and import a backup or individual match export. Imports require explicit player links, skip duplicates and preserve a pre-import recovery copy. Undo is available until another change is saved. Import limits are 20 MB, 100 players and 100 archived results; oversized combinations are rejected without trimming existing data. Clearing browser data removes local results. There is no account or cloud sync yet. External fonts use system fallbacks if unavailable.
+
+## Offline use and installation
+
+Run `npm run build` and `npm run preview` to try the built app locally. Open the preview address online once and check **Data & backups → Ready for offline play** before disconnecting. Development mode (`npm run dev`) deliberately has no service worker, so edits remain immediate and reopening requires the dev server. Service workers require HTTPS or a browser-trusted localhost address; installation support depends on the browser. The manifest name and target icon are provisional.
+
+The worker precaches only the public app shell and build assets, including the import-review worker. It does not cache APIs, external fonts, match data or media. Open tabs stay on one build until all app tabs close; there is no forced update during play. Browser storage eviction or clearing still removes local saves and offline files. Online features will require connectivity when implemented.
 
 ## Checks and development tools
 
@@ -62,6 +70,7 @@ The current match, saved players and latest 100 completed matches stay in this b
 npm run check                # TypeScript, scoring tests and production build
 npx playwright install chromium
 npm run test:e2e             # Browser tests; starts its own test server
+npm run test:offline         # Builds app and tests real offline/update behaviour
 npm run test:watch            # Scoring tests during development
 npm run format               # Format source and configuration
 npm run build

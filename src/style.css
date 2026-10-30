@@ -967,7 +967,7 @@ th {
     padding-inline: 16px;
     height: 58px;
   }
-  .topbar > span:first-child {
+  .topbar > .topbar-tagline {
     font-size: 7px;
     letter-spacing: 1px;
   }

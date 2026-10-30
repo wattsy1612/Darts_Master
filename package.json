@@ -1,7 +1,7 @@
 {
   "name": "darts-master",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.8.0",
   "type": "module",
   "engines": {
     "node": ">=24 <25"
@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "check": "npm run typecheck && npm test && npm run build",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:offline": "npm run build && playwright test --config playwright.offline.config.ts"
   },
   "dependencies": {
     "react": "^19.3.1",

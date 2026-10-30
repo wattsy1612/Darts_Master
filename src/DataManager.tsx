@@ -18,6 +18,7 @@ import { validateDocument } from './data/workspace';
 import type { WorkspaceData } from './data/workspace';
 import { replay } from './domain/match';
 import ActionButton from './ui/ActionButton';
+import { OfflineSettings } from './OfflineSupport';
 
 function download(text: string, name: string) {
   const url = URL.createObjectURL(
@@ -150,6 +151,7 @@ export default function DataManager({
   }
   return (
     <div className="data-manager">
+      <OfflineSettings />
       <section className="panel data-panel">
         <div className="section-label">YOUR DATA, ON THIS DEVICE</div>
         <h2>Back up before you need it.</h2>
