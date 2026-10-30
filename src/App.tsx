@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import MatchHistory from './MatchHistory';
 import DartboardEntry from './DartboardEntry';
 import { dartLabel } from './domain/darts';
+import { botVisit, difficulties } from './domain/bot';
 import {
   archiveKey,
   matchId,
@@ -65,7 +66,21 @@ export default function App() {
     savedArchive.matches,
   );
   const [archiveError, setArchiveError] = useState(savedArchive.warning);
-  const [redoCommands, setRedoCommands] = useState<Command[]>([]);
+  const [redoGroups, setRedoGroups] = useState<Command[][]>([]);
+  const [botPaused, setBotPaused] = useState(() => {
+    try {
+      const control = JSON.parse(
+        localStorage.getItem('darts-master.practice-control.v1') ?? 'null',
+      );
+      return (
+        !!saved.session?.id &&
+        control?.id === saved.session.id &&
+        control?.paused === true
+      );
+    } catch {
+      return false;
+    }
+  });
   const [replaceConfirmed, setReplaceConfirmed] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const [editing, setEditing] = useState(!saved.session);
@@ -85,6 +100,9 @@ export default function App() {
   const [storageWarning, setStorageWarning] = useState(saved.warning);
   const [tab, setTab] = useState<'score' | 'history' | 'roadmap'>('score');
   const match = useMemo(() => (session ? replay(session) : null), [session]);
+  const botTurn =
+    !!match?.setup.bot && match.turn === 1 && match.legWinner === null;
+  const entryBlocked = !match || match.legWinner !== null || botTurn;
   const route = match ? checkoutRoute(match.scores[match.turn]) : null;
   const resultSaved =
     !!session && archives.some((entry) => entry.session.id === session.id);
@@ -119,6 +137,18 @@ export default function App() {
     }
   }, [session]);
 
+  useEffect(() => {
+    if (!session?.setup.bot) return;
+    try {
+      localStorage.setItem(
+        'darts-master.practice-control.v1',
+        JSON.stringify({ id: session.id, paused: botPaused }),
+      );
+    } catch {
+      /* A blocked preference store does not prevent a local practice match. */
+    }
+  }, [session?.id, session?.setup.bot, botPaused]);
+
   function append(command: Command) {
     if (!session) return;
     const next: Session = {
@@ -135,7 +165,7 @@ export default function App() {
             ? `${result.setup.players[last.player]}: ${last.bust ? 'bust. Score unchanged.' : last.checkout ? `${last.total}. Game shot!` : `${last.total} scored. ${result.scores[last.player]} remaining.`}`
             : '',
       );
-      setRedoCommands([]);
+      setRedoGroups([]);
       setSession(next);
       setScore('');
       setDouble(false);
@@ -146,7 +176,7 @@ export default function App() {
     }
   }
   function submit() {
-    if (!score) return;
+    if (!score || entryBlocked) return;
     append({
       type: 'visit',
       visit: { total: Number(score), darts, double: finishing && double },
@@ -159,25 +189,37 @@ export default function App() {
   }
   function undo() {
     if (!session) return;
-    const removed = session.commands.at(-1);
-    if (!removed) return;
-    setRedoCommands([removed, ...redoCommands]);
-    setSession({ ...session, commands: session.commands.slice(0, -1) });
-    setAnnouncement('Last action undone.');
+    if (!session.commands.length) return;
+    const last = session.commands.at(-1);
+    const previous = session.commands.at(-2);
+    const pair =
+      !!session.setup.bot &&
+      last?.type === 'visit' &&
+      previous?.type === 'visit' &&
+      match?.visits.at(-1)?.player === 1 &&
+      match.visits.at(-2)?.player === 0;
+    const count = pair ? 2 : 1;
+    setRedoGroups([session.commands.slice(-count), ...redoGroups]);
+    setSession({ ...session, commands: session.commands.slice(0, -count) });
+    setAnnouncement(
+      pair
+        ? 'Your visit and the opponent reply were undone.'
+        : 'Last action undone.',
+    );
     setScore('');
     setError('');
     setDouble(false);
     setDarts(3);
   }
   function redo() {
-    if (!session || !redoCommands.length) return;
+    if (!session || !redoGroups.length) return;
     const next = {
       ...session,
-      commands: [...session.commands, redoCommands[0]],
+      commands: [...session.commands, ...redoGroups[0]],
     };
     replay(next);
     setSession(next);
-    setRedoCommands(redoCommands.slice(1));
+    setRedoGroups(redoGroups.slice(1));
     setScore('');
     setDouble(false);
     setDarts(3);
@@ -191,7 +233,7 @@ export default function App() {
         entryMode !== 'keypad' ||
         tab !== 'score' ||
         !match ||
-        match.legWinner !== null ||
+        entryBlocked ||
         event.ctrlKey ||
         event.metaKey ||
         event.altKey
@@ -218,6 +260,26 @@ export default function App() {
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
   });
+  useEffect(() => {
+    if (
+      !session ||
+      !match ||
+      !botTurn ||
+      botPaused ||
+      redoGroups.length ||
+      editing ||
+      tab !== 'score'
+    )
+      return;
+    const timer = window.setTimeout(() => {
+      append({
+        type: 'visit',
+        visit: botVisit(match, `${session.id}-${session.commands.length}`),
+      });
+    }, 1400);
+    return () => window.clearTimeout(timer);
+  }, [session, botTurn, botPaused, redoGroups.length, editing, tab]);
+
   function start(event: React.FormEvent) {
     event.preventDefault();
     try {
@@ -232,8 +294,9 @@ export default function App() {
         setup: checked.setup,
         commands: [],
       });
-      setRedoCommands([]);
+      setRedoGroups([]);
       setReplaceConfirmed(false);
+      setBotPaused(false);
       setAnnouncement('');
       setEditing(false);
       setError('');
@@ -298,7 +361,7 @@ export default function App() {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.3</span>
+          Development build <span>v0.4</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -379,20 +442,125 @@ export default function App() {
               {announcement}
             </div>
           )}
+          {tab === 'score' && match?.setup.bot && !editing && (
+            <div className="practice-status" role="status">
+              <div>
+                <span className="eyebrow">
+                  PRACTICE · {difficulties[match.setup.bot].name.toUpperCase()}
+                </span>
+                <strong>
+                  {match.winner !== null
+                    ? 'Practice match complete'
+                    : match.legWinner !== null
+                      ? 'Leg complete · ready for the next leg'
+                      : botPaused || redoGroups.length
+                        ? 'Opponent paused'
+                        : botTurn
+                          ? 'Opponent is throwing…'
+                          : 'Your turn at the board'}
+                </strong>
+                <small>
+                  {redoGroups.length
+                    ? 'Redo your correction, or resume to continue.'
+                    : 'Simulated darts use the same rules as your own throws.'}
+                </small>
+              </div>
+              {match.winner === null && (
+                <button
+                  className="button secondary"
+                  onClick={() => {
+                    if (botPaused || redoGroups.length) {
+                      setBotPaused(false);
+                      setRedoGroups([]);
+                    } else setBotPaused(true);
+                  }}
+                >
+                  {botPaused || redoGroups.length
+                    ? 'Resume opponent'
+                    : 'Pause opponent'}
+                </button>
+              )}
+            </div>
+          )}
           {tab === 'score' &&
             (editing ? (
               <section className="setup-panel panel">
                 <div className="section-label">01 / MATCH SETUP</div>
                 <h2>Who’s at the board?</h2>
                 <p className="muted">
-                  Two players. Alternate starts. Double out.
+                  {setup.bot
+                    ? 'Practice against a simulated opponent. Double out.'
+                    : 'Two players. Alternate starts. Double out.'}
                 </p>
                 <form onSubmit={start}>
+                  <div
+                    className="match-mode-picker"
+                    role="group"
+                    aria-label="Match mode"
+                  >
+                    <button
+                      type="button"
+                      aria-pressed={!setup.bot}
+                      onClick={() =>
+                        setSetup({
+                          ...setup,
+                          bot: undefined,
+                          players: [
+                            setup.players[0],
+                            setup.players[1] === 'Practice Bot'
+                              ? 'Player 2'
+                              : setup.players[1],
+                          ],
+                        })
+                      }
+                    >
+                      <strong>Local match</strong>
+                      <span>Two players at one board</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={!!setup.bot}
+                      onClick={() =>
+                        setSetup({
+                          ...setup,
+                          bot: setup.bot ?? 'regular',
+                          players: [setup.players[0], 'Practice Bot'],
+                        })
+                      }
+                    >
+                      <strong>Practice opponent</strong>
+                      <span>Play a simulated opponent</span>
+                    </button>
+                  </div>
+                  {setup.bot && (
+                    <div
+                      className="difficulty-picker"
+                      role="group"
+                      aria-label="Practice difficulty"
+                    >
+                      {Object.entries(difficulties).map(([key, value]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          aria-pressed={setup.bot === key}
+                          onClick={() =>
+                            setSetup({ ...setup, bot: key as Setup['bot'] })
+                          }
+                        >
+                          <strong>{value.name}</strong>
+                          <span>{value.description}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="form-grid">
                     {setup.players.map((name, index) => (
                       <label key={index}>
-                        Player {index + 1}
+                        {index === 1 && setup.bot
+                          ? 'Opponent name'
+                          : `Player ${index + 1}`}
                         <input
+                          disabled={index === 1 && !!setup.bot}
                           required
                           maxLength={30}
                           value={name}
@@ -437,6 +605,21 @@ export default function App() {
                             {n} {n === 1 ? 'leg' : 'legs'}
                           </option>
                         ))}
+                      </select>
+                    </label>
+                    <label>
+                      Throws first
+                      <select
+                        value={setup.starter ?? 0}
+                        onChange={(e) =>
+                          setSetup({
+                            ...setup,
+                            starter: Number(e.target.value) as 0 | 1,
+                          })
+                        }
+                      >
+                        <option value={0}>{setup.players[0]}</option>
+                        <option value={1}>{setup.players[1]}</option>
                       </select>
                     </label>
                   </div>
@@ -495,7 +678,9 @@ export default function App() {
                 <>
                   <div className="match-meta">
                     <div>
-                      <span className="live-label">● LIVE MATCH</span>
+                      <span className="live-label">
+                        {match.setup.bot ? '● PRACTICE MATCH' : '● LIVE MATCH'}
+                      </span>
                       <span>
                         {match.setup.start} · Double out · First to{' '}
                         {match.setup.legsToWin}
@@ -610,9 +795,11 @@ export default function App() {
                               <p>
                                 {route
                                   ? 'Finish on a double. Make it count.'
-                                  : entryMode === 'board'
-                                    ? 'Tap where your darts landed on the board.'
-                                    : 'Enter your visit total on the right.'}
+                                  : botTurn
+                                    ? 'Your opponent’s score will appear shortly.'
+                                    : entryMode === 'board'
+                                      ? 'Tap where your darts landed on the board.'
+                                      : 'Enter your visit total on the right.'}
                               </p>
                             </>
                           )}
@@ -634,7 +821,7 @@ export default function App() {
                             </button>
                             <button
                               className="text-button"
-                              disabled={!redoCommands.length}
+                              disabled={!redoGroups.length}
                               aria-label="Redo"
                               onClick={redo}
                             >
@@ -723,7 +910,8 @@ export default function App() {
                         <DartboardEntry
                           key={`${session?.id}-${session?.commands.length}`}
                           remaining={match.scores[match.turn]}
-                          disabled={match.legWinner !== null}
+                          waitingForOpponent={botTurn}
+                          disabled={entryBlocked}
                           error={error}
                           onRecord={(visit) => append({ type: 'visit', visit })}
                         />
@@ -734,11 +922,13 @@ export default function App() {
                       >
                         <div className="section-label">YOUR VISIT</div>
                         <h2>
-                          {match.legWinner !== null
-                            ? 'Nicely thrown.'
-                            : 'What did you hit?'}
+                          {botTurn
+                            ? 'Opponent’s turn'
+                            : match.legWinner !== null
+                              ? 'Nicely thrown.'
+                              : 'What did you hit?'}
                         </h2>
-                        <fieldset disabled={match.legWinner !== null}>
+                        <fieldset disabled={entryBlocked}>
                           <legend className="sr-only">Enter visit score</legend>
                           <label className="score-label" htmlFor="visit-score">
                             Visit total

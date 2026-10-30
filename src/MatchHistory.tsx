@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { dartLabel } from './domain/darts';
+import { difficulties } from './domain/bot';
 import { playerStats, replay } from './domain/match';
 import type { Session } from './domain/match';
 import { exportMatch } from './domain/archive';
@@ -77,6 +78,8 @@ export default function MatchHistory({
               <p>
                 {match.setup.start} · Double out · First to{' '}
                 {match.setup.legsToWin}
+                {match.setup.bot &&
+                  ` · Practice: ${difficulties[match.setup.bot].name}`}
               </p>
             </div>
             <div className="comparison-grid">

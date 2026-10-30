@@ -4,6 +4,8 @@ export type Setup = {
   players: [string, string];
   start: number;
   legsToWin: number;
+  bot?: 'rookie' | 'regular' | 'sharp';
+  starter?: 0 | 1;
 };
 export type Visit = {
   total: number;
@@ -75,6 +77,13 @@ export function createMatch(setup: Setup): Match {
     setup.legsToWin > 11
   )
     throw new Error('Choose between 1 and 11 legs to win.');
+  if (
+    setup.bot !== undefined &&
+    !['rookie', 'regular', 'sharp'].includes(setup.bot)
+  )
+    throw new Error('Choose a valid practice difficulty.');
+  if (setup.starter !== undefined && setup.starter !== 0 && setup.starter !== 1)
+    throw new Error('Choose who throws first.');
   return {
     setup: {
       ...setup,
@@ -82,7 +91,7 @@ export function createMatch(setup: Setup): Match {
     },
     scores: [setup.start, setup.start],
     legs: [0, 0],
-    turn: 0,
+    turn: setup.starter ?? 0,
     leg: 1,
     legWinner: null,
     winner: null,
@@ -159,7 +168,7 @@ export function nextLeg(match: Match): Match {
     ...match,
     scores: [match.setup.start, match.setup.start],
     leg: match.leg + 1,
-    turn: match.leg % 2,
+    turn: ((match.setup.starter ?? 0) + match.leg) % 2,
     legWinner: null,
   };
 }

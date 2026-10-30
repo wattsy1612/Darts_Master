@@ -34,11 +34,13 @@ export default function DartboardEntry({
   disabled,
   onRecord,
   error,
+  waitingForOpponent = false,
 }: {
   remaining: number;
   disabled: boolean;
   onRecord: (visit: Visit) => void;
   error: string;
+  waitingForOpponent?: boolean;
 }) {
   const [hits, setHits] = useState<DartHit[]>([]);
   const [precision, setPrecision] = useState(false);
@@ -75,7 +77,13 @@ export default function DartboardEntry({
       <div className="dartboard-heading">
         <div>
           <span className="section-label">TAP YOUR DARTS</span>
-          <h2>{disabled ? 'Leg complete' : 'Where did it land?'}</h2>
+          <h2>
+            {waitingForOpponent
+              ? 'Opponent’s turn'
+              : disabled
+                ? 'Leg complete'
+                : 'Where did it land?'}
+          </h2>
         </div>
         <span className="dart-counter">{hits.length} / 3 DARTS</span>
       </div>
@@ -306,7 +314,9 @@ export default function DartboardEntry({
       <div className={`dart-preview ${result.status}`} aria-live="polite">
         <span>
           {disabled
-            ? 'VISIT COMPLETE'
+            ? waitingForOpponent
+              ? 'OPPONENT TURN'
+              : 'VISIT COMPLETE'
             : result.status === 'checkout'
               ? 'GAME SHOT'
               : result.status === 'bust'
@@ -322,7 +332,9 @@ export default function DartboardEntry({
         </strong>
         <small>
           {disabled
-            ? 'Start the next leg or view your match summary.'
+            ? waitingForOpponent
+              ? 'Their darts will appear in match history.'
+              : 'Start the next leg or view your match summary.'
             : result.status === 'bust'
               ? 'The whole visit scores zero.'
               : ended

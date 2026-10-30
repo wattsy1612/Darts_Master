@@ -1630,3 +1630,125 @@ th {
   white-space: nowrap;
   color: #496737;
 }
+
+.match-mode-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 25px 0 18px;
+}
+.match-mode-picker button,
+.difficulty-picker button {
+  border: 1px solid #d9e1d0;
+  background: #f5f6ef;
+  border-radius: 6px;
+  padding: 18px;
+  text-align: left;
+  min-width: 0;
+}
+.match-mode-picker button[aria-pressed='true'],
+.difficulty-picker button[aria-pressed='true'] {
+  background: #e8f2db;
+  border-color: #8caf65;
+  box-shadow: 0 0 0 1px #8caf65;
+}
+.match-mode-picker strong,
+.difficulty-picker strong {
+  display: block;
+  font-size: 14px;
+  color: #3d5930;
+  margin-bottom: 7px;
+}
+.match-mode-picker span,
+.difficulty-picker span {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #7a8c69;
+  display: block;
+}
+.difficulty-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 18px 0 25px;
+}
+.difficulty-picker button {
+  padding: 15px;
+}
+.difficulty-picker strong {
+  font-size: 13px;
+}
+.difficulty-picker span {
+  font-size: 10px;
+}
+.practice-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: #e7efde;
+  border: 1px solid #ccdbbc;
+  border-radius: 6px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+.practice-status strong {
+  display: block;
+  font-size: 15px;
+  margin: 7px 0;
+  color: #3d5930;
+}
+.practice-status small {
+  font-size: 10px;
+  color: #7a8c69;
+  line-height: 1.6;
+}
+.practice-status .eyebrow {
+  font-size: 8px;
+}
+.practice-status .button {
+  white-space: nowrap;
+}
+.form-grid input:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+@media (max-width: 600px) {
+  .difficulty-picker {
+    grid-template-columns: 1fr;
+  }
+  .difficulty-picker button {
+    padding: 12px 15px;
+  }
+  .difficulty-picker strong {
+    margin-bottom: 3px;
+  }
+  .match-mode-picker {
+    gap: 9px;
+  }
+  .match-mode-picker button {
+    padding: 14px 10px;
+  }
+  .match-mode-picker strong {
+    font-size: 12px;
+  }
+  .match-mode-picker span {
+    font-size: 10px;
+  }
+  .practice-status {
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 12px;
+  }
+  .practice-status strong {
+    font-size: 13px;
+  }
+  .practice-status .button {
+    font-size: 9px;
+    padding: 10px;
+    min-height: 36px;
+  }
+  .practice-status small {
+    font-size: 9px;
+  }
+}
