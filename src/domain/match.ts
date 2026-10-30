@@ -6,6 +6,7 @@ export type Setup = {
   legsToWin: number;
   bot?: 'rookie' | 'regular' | 'sharp';
   starter?: 0 | 1;
+  playerIds?: [string | null, string | null];
 };
 export type Visit = {
   total: number;
@@ -84,6 +85,20 @@ export function createMatch(setup: Setup): Match {
     throw new Error('Choose a valid practice difficulty.');
   if (setup.starter !== undefined && setup.starter !== 0 && setup.starter !== 1)
     throw new Error('Choose who throws first.');
+  if (setup.playerIds !== undefined) {
+    if (
+      !Array.isArray(setup.playerIds) ||
+      setup.playerIds.length !== 2 ||
+      setup.playerIds.some(
+        (id) => id !== null && (typeof id !== 'string' || !id.trim()),
+      )
+    )
+      throw new Error('Choose valid saved players.');
+    if (setup.playerIds[0] && setup.playerIds[0] === setup.playerIds[1])
+      throw new Error('Choose a different player for each side.');
+    if (setup.bot && setup.playerIds[1] !== null)
+      throw new Error('A practice opponent cannot use a player profile.');
+  }
   return {
     setup: {
       ...setup,

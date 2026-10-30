@@ -3,6 +3,8 @@ import MatchHistory from './MatchHistory';
 import DartboardEntry from './DartboardEntry';
 import { dartLabel } from './domain/darts';
 import { botVisit, difficulties } from './domain/bot';
+import PlayerProfiles, { PlayerField } from './PlayerProfiles';
+import { usePlayers } from './usePlayers';
 import {
   archiveKey,
   matchId,
@@ -58,6 +60,7 @@ function loadArchive() {
 const savedArchive = loadArchive();
 
 export default function App() {
+  const playerStore = usePlayers();
   const [session, setSession] = useState<Session | null>(saved.session);
   const [setup, setSetup] = useState<Setup>(
     saved.session?.setup ?? initialSetup,
@@ -98,7 +101,9 @@ export default function App() {
   const [double, setDouble] = useState(false);
   const [error, setError] = useState('');
   const [storageWarning, setStorageWarning] = useState(saved.warning);
-  const [tab, setTab] = useState<'score' | 'history' | 'roadmap'>('score');
+  const [tab, setTab] = useState<'score' | 'history' | 'players' | 'roadmap'>(
+    'score',
+  );
   const match = useMemo(() => (session ? replay(session) : null), [session]);
   const botTurn =
     !!match?.setup.bot && match.turn === 1 && match.legWinner === null;
@@ -287,7 +292,15 @@ export default function App() {
         throw new Error(
           'Confirm that you want to replace this match, or go back to continue or export it.',
         );
-      const checked = createMatch(setup);
+      const linkedNames = setup.players.map((name, index) => {
+        const id = setup.playerIds?.[index];
+        if (!id) return name;
+        const player = playerStore.players.find((p) => p.id === id);
+        if (!player)
+          throw new Error('Select an available saved player, or choose Guest.');
+        return player.name;
+      }) as [string, string];
+      const checked = createMatch({ ...setup, players: linkedNames });
       setSession({
         version: 1,
         id: matchId(),
@@ -332,6 +345,7 @@ export default function App() {
             [
               ['score', '◎', 'Local scorer'],
               ['history', '≡', 'Match history'],
+              ['players', '♙', 'Players'],
               ['roadmap', '↗', 'What’s next'],
             ] as const
           ).map(([id, icon, title]) => (
@@ -361,7 +375,7 @@ export default function App() {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.4</span>
+          Development build <span>v0.5</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -381,14 +395,18 @@ export default function App() {
                   ? 'Let’s play darts.'
                   : tab === 'history'
                     ? 'Every visit counts.'
-                    : 'Beyond the scoreboard.'}
+                    : tab === 'players'
+                      ? 'Your players. Their game.'
+                      : 'Beyond the scoreboard.'}
               </h1>
               <p>
                 {tab === 'score'
                   ? 'A proper game. A clear score. One dart at a time.'
                   : tab === 'history'
                     ? 'Saved matches, player stats and every visit at the board.'
-                    : 'One home for your game, your team and your competition.'}
+                    : tab === 'players'
+                      ? 'A familiar line-up, with a record that grows with every match.'
+                      : 'One home for your game, your team and your competition.'}
               </p>
             </div>
             {match && !editing && (
@@ -442,6 +460,17 @@ export default function App() {
               {announcement}
             </div>
           )}
+          {(tab === 'players' || (tab === 'score' && editing)) &&
+            playerStore.problem && (
+              <div className="notice" role="alert">
+                {playerStore.problem}
+                {playerStore.locked && (
+                  <button className="text-button" onClick={playerStore.reset}>
+                    Reset saved players
+                  </button>
+                )}
+              </div>
+            )}
           {tab === 'score' && match?.setup.bot && !editing && (
             <div className="practice-status" role="status">
               <div>
@@ -525,6 +554,7 @@ export default function App() {
                           ...setup,
                           bot: setup.bot ?? 'regular',
                           players: [setup.players[0], 'Practice Bot'],
+                          playerIds: [setup.playerIds?.[0] ?? null, null],
                         })
                       }
                     >
@@ -555,26 +585,53 @@ export default function App() {
                   )}
                   <div className="form-grid">
                     {setup.players.map((name, index) => (
-                      <label key={index}>
-                        {index === 1 && setup.bot
-                          ? 'Opponent name'
-                          : `Player ${index + 1}`}
-                        <input
-                          disabled={index === 1 && !!setup.bot}
-                          required
-                          maxLength={30}
-                          value={name}
-                          autoComplete="off"
-                          onChange={(event) =>
-                            setSetup({
-                              ...setup,
-                              players: setup.players.map((p, i) =>
-                                i === index ? event.target.value : p,
-                              ) as [string, string],
-                            })
-                          }
-                        />
-                      </label>
+                      <PlayerField
+                        key={index}
+                        index={index}
+                        name={name}
+                        bot={index === 1 && !!setup.bot}
+                        profileId={setup.playerIds?.[index] ?? null}
+                        players={playerStore.players}
+                        onName={(name) =>
+                          setSetup({
+                            ...setup,
+                            players: setup.players.map((p, i) =>
+                              i === index ? name : p,
+                            ) as [string, string],
+                          })
+                        }
+                        onSelect={(id) => {
+                          const ids: [string | null, string | null] = [
+                            ...(setup.playerIds ?? [null, null]),
+                          ];
+                          ids[index] = id || null;
+                          const player = playerStore.players.find(
+                            (p) => p.id === id,
+                          );
+                          setSetup({
+                            ...setup,
+                            playerIds: ids,
+                            players: setup.players.map((p, i) =>
+                              i === index && player ? player.name : p,
+                            ) as [string, string],
+                          });
+                        }}
+                        onSave={() => {
+                          const player = playerStore.add(name);
+                          if (!player) return;
+                          const ids: [string | null, string | null] = [
+                            ...(setup.playerIds ?? [null, null]),
+                          ];
+                          ids[index] = player.id;
+                          setSetup({
+                            ...setup,
+                            playerIds: ids,
+                            players: setup.players.map((p, i) =>
+                              i === index ? player.name : p,
+                            ) as [string, string],
+                          });
+                        }}
+                      />
                     ))}
                     <label>
                       Starting score
@@ -618,8 +675,16 @@ export default function App() {
                           })
                         }
                       >
-                        <option value={0}>{setup.players[0]}</option>
-                        <option value={1}>{setup.players[1]}</option>
+                        <option value={0}>
+                          {playerStore.players.find(
+                            (p) => p.id === setup.playerIds?.[0],
+                          )?.name ?? setup.players[0]}
+                        </option>
+                        <option value={1}>
+                          {playerStore.players.find(
+                            (p) => p.id === setup.playerIds?.[1],
+                          )?.name ?? setup.players[1]}
+                        </option>
                       </select>
                     </label>
                   </div>
@@ -1049,6 +1114,30 @@ export default function App() {
           {tab === 'history' && (
             <MatchHistory current={session} archives={archives} />
           )}
+          {tab === 'players' && (
+            <PlayerProfiles
+              players={playerStore.players}
+              archives={archives}
+              onAdd={playerStore.add}
+              onRename={playerStore.rename}
+              onPlay={(player) => {
+                setSetup({
+                  ...setup,
+                  players: [player.name, setup.players[1]],
+                  playerIds: [
+                    player.id,
+                    setup.playerIds?.[1] === player.id
+                      ? null
+                      : (setup.playerIds?.[1] ?? null),
+                  ],
+                });
+                setReplaceConfirmed(false);
+                setEditing(true);
+                setError('');
+                setTab('score');
+              }}
+            />
+          )}
           {tab === 'roadmap' && (
             <section className="roadmap">
               <div className="roadmap-intro">
@@ -1072,18 +1161,24 @@ export default function App() {
                 ],
                 [
                   '02',
+                  'Accounts & registration',
+                  'Sign-up, email verification, sign-in, password recovery and linking local profiles to an account.',
+                  'Planned',
+                ],
+                [
+                  '03',
                   'Connected boards',
                   'Camera detection and adapters for supported scoring systems.',
                   'Planned',
                 ],
                 [
-                  '03',
+                  '04',
                   'Match rooms & teams',
                   'Online opponents, team lobbies and club nights.',
                   'Planned',
                 ],
                 [
-                  '04',
+                  '05',
                   'Tournaments & streams',
                   'Competition management, spectator views and live video.',
                   'Planned',
