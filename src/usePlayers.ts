@@ -1,46 +1,23 @@
-import { useState } from 'react';
-import {
-  addPlayer,
-  playersKey,
-  readPlayers,
-  renamePlayer,
-} from './domain/players';
+import { useRef, useState } from 'react';
 import type { Player } from './domain/players';
-function load() {
-  try {
-    return {
-      players: readPlayers(localStorage.getItem(playersKey)),
-      problem: '',
-      locked: false,
-    };
-  } catch {
-    return {
-      players: [],
-      problem:
-        'Saved players could not be loaded. Their data is preserved until you choose to reset it.',
-      locked: true,
-    };
-  }
-}
-export function usePlayers() {
-  const [initial] = useState(load);
-  const [players, setPlayers] = useState<Player[]>(initial.players);
-  const [problem, setProblem] = useState(initial.problem);
-  const [locked, setLocked] = useState(initial.locked);
-  function save(next: Player[]) {
-    localStorage.setItem(
-      playersKey,
-      JSON.stringify({ version: 1, players: next }),
-    );
-    setPlayers(next);
-    setProblem('');
-  }
-  function add(name: string): Player | null {
-    if (locked) return null;
+import type { LocalRepository } from './data/repository';
+export function usePlayers(repository: LocalRepository) {
+  const [players, setPlayers] = useState<Player[]>(
+    repository.document.data.players,
+  );
+  const [problem, setProblem] = useState(repository.legacyErrors.players ?? '');
+  const [pending, setPending] = useState(false);
+  const inFlight = useRef(false);
+  const locked = repository.mode !== 'database';
+  async function add(name: string): Promise<Player | null> {
+    if (locked || inFlight.current) return null;
+    inFlight.current = true;
+    setPending(true);
     try {
-      const next = addPlayer(players, name);
-      save(next);
-      return next.at(-1)!;
+      const player = await repository.addPlayer(name);
+      setPlayers(repository.document.data.players);
+      setProblem('');
+      return player;
     } catch (e) {
       setProblem(
         e instanceof DOMException
@@ -50,12 +27,19 @@ export function usePlayers() {
             : 'Could not save player.',
       );
       return null;
+    } finally {
+      inFlight.current = false;
+      setPending(false);
     }
   }
-  function rename(id: string, name: string): boolean {
-    if (locked) return false;
+  async function rename(id: string, name: string): Promise<boolean> {
+    if (locked || inFlight.current) return false;
+    inFlight.current = true;
+    setPending(true);
     try {
-      save(renamePlayer(players, id, name));
+      await repository.renamePlayer(id, name);
+      setPlayers(repository.document.data.players);
+      setProblem('');
       return true;
     } catch (e) {
       setProblem(
@@ -66,9 +50,12 @@ export function usePlayers() {
             : 'Could not rename player.',
       );
       return false;
+    } finally {
+      inFlight.current = false;
+      setPending(false);
     }
   }
-  function reset() {
+  async function reset() {
     if (
       !window.confirm(
         'Reset the unreadable saved players? This cannot be undone. Match history will remain.',
@@ -76,15 +63,13 @@ export function usePlayers() {
     )
       return;
     try {
-      localStorage.removeItem(playersKey);
-      setPlayers([]);
-      setLocked(false);
-      setProblem('');
+      await repository.resetLegacy('players');
+      window.location.reload();
     } catch {
       setProblem(
         'Browser storage is unavailable. Saved players could not be reset.',
       );
     }
   }
-  return { players, problem, locked, add, rename, reset };
+  return { players, problem, locked, pending, add, rename, reset };
 }

@@ -2,7 +2,7 @@
 
 This backlog turns the [master plan](IMPLEMENTATION_PLAN.md) and [design brief](DESIGN_BRIEF.md) into bounded work. It is a planning baseline, not a list of already delivered features. Existing behaviour should be reused and strengthened where noted.
 
-**Status:** `Existing` means present in v0.5 and still subject to production hardening; `Planned` means not yet accepted as delivered; `Spike` requires evidence before a release commitment; `Conditional` needs a product/business decision. Release labels refer to the master plan; no calendar dates or cost commitments are implied.
+**Status:** `Existing` means present in v0.5 and still subject to production hardening; `Planned` means not yet accepted as delivered; `Spike` requires evidence before a release commitment; `Conditional` needs a product/business decision. Release labels are internal implementation/validation stages, not permission for a reduced public launch. The owner requires the first polished public release to serve home/remote players, clubs/venues, teams and organisers together. No calendar dates or cost commitments are implied.
 
 ## Product, design and brand
 

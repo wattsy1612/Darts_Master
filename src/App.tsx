@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import MatchHistory from './MatchHistory';
 import DartboardEntry from './DartboardEntry';
 import { dartLabel } from './domain/darts';
@@ -8,12 +8,10 @@ import { usePlayers } from './usePlayers';
 import { useRoute } from './useRoute';
 import ActionButton from './ui/ActionButton';
 import ComponentGallery from './ui/ComponentGallery';
-import {
-  archiveKey,
-  matchId,
-  readArchive,
-  updateArchive,
-} from './domain/archive';
+import DataManager from './DataManager';
+import { browserRepository } from './data/repository';
+import type { LocalRepository } from './data/repository';
+import { matchId, readArchive, updateArchive } from './domain/archive';
 import type { ArchivedMatch } from './domain/archive';
 import type { Command, Session, Setup } from './domain/match';
 import {
@@ -23,47 +21,47 @@ import {
   replay,
 } from './domain/match';
 
-const storageKey = 'darts-master.match.v1';
 const initialSetup: Setup = {
   players: ['Player 1', 'Player 2'],
   start: 501,
   legsToWin: 3,
 };
-function load(): { session: Session | null; warning: string } {
-  try {
-    const raw = localStorage.getItem(storageKey);
-    if (!raw) return { session: null, warning: '' };
-    const session: Session = JSON.parse(raw);
-    replay(session);
-    session.id ??= matchId();
-    return { session, warning: '' };
-  } catch {
-    return {
-      session: null,
-      warning:
-        'Your saved match could not be loaded. You can start a new match.',
-    };
-  }
-}
-const saved = load();
-function loadArchive() {
-  try {
-    return {
-      matches: readArchive(localStorage.getItem(archiveKey)),
-      warning: '',
-    };
-  } catch {
-    return {
-      matches: [],
-      warning:
-        'Your match archive could not be loaded. Existing archive data will be kept until you choose to reset it.',
-    };
-  }
-}
-const savedArchive = loadArchive();
-
 export default function App() {
-  const playerStore = usePlayers();
+  const [repository, setRepository] = useState<LocalRepository | null>(null);
+  useEffect(() => {
+    let active = true;
+    browserRepository().then((value) => {
+      if (active) setRepository(value);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+  return repository ? (
+    <DartsApplication repository={repository} />
+  ) : (
+    <main className="boot-panel panel">
+      <h1>Opening your saved games…</h1>
+      <p role="status">Checking local data before starting the scorer.</p>
+    </main>
+  );
+}
+
+function DartsApplication({ repository }: { repository: LocalRepository }) {
+  const saved = {
+    session: repository.document.data.current,
+    warning: repository.legacyErrors.current ?? repository.problem,
+  };
+  const savedArchive = {
+    matches: repository.document.data.archive,
+    warning: repository.legacyErrors.archive ?? '',
+  };
+
+  const playerStore = usePlayers(repository);
+  const saveState = useSyncExternalStore(
+    repository.subscribe,
+    repository.getSaveState,
+  );
   const [session, setSession] = useState<Session | null>(saved.session);
   const [setup, setSetup] = useState<Setup>(
     saved.session?.setup ?? initialSetup,
@@ -150,22 +148,25 @@ export default function App() {
       setSession({ ...session, id: matchId() });
       return;
     }
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(session));
-      if (!archiveError) {
-        const nextArchives = updateArchive(archives, session);
-        localStorage.setItem(
-          archiveKey,
-          JSON.stringify({ version: 1, matches: nextArchives }),
+    let active = true;
+    repository
+      .saveMatch(session)
+      .then((result) => {
+        if (!active) return;
+        setArchives(result.data.archive);
+        setStorageWarning('');
+      })
+      .catch((error) => {
+        if (!active) return;
+        setStorageWarning(
+          error instanceof Error && error.message.includes('Another tab')
+            ? error.message
+            : 'Some match data could not be saved. Browser storage may be unavailable or full. Keep this page open and export your result.',
         );
-        setArchives(nextArchives);
-      }
-      setStorageWarning('');
-    } catch {
-      setStorageWarning(
-        'Some match data could not be saved. Browser storage may be unavailable or full. Keep this page open and export your result.',
-      );
-    }
+      });
+    return () => {
+      active = false;
+    };
   }, [session]);
 
   useEffect(() => {
@@ -374,6 +375,7 @@ export default function App() {
               ['score', '◎', 'Local scorer'],
               ['history', '≡', 'Match history'],
               ['players', '♙', 'Players'],
+              ['data', '↓', 'Data & backups'],
               ['roadmap', '↗', 'What’s next'],
             ] as const
           ).map(([id, icon, title]) => (
@@ -403,7 +405,7 @@ export default function App() {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.6</span>
+          Development build <span>v0.7</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -412,6 +414,13 @@ export default function App() {
           <span className="local-badge">
             <span className="status-dot" />
             Local play
+          </span>
+          <span className={`save-state ${saveState}`}>
+            {saveState === 'saved'
+              ? 'Saved on this device'
+              : saveState === 'saving'
+                ? 'Saving…'
+                : 'Not saved'}
           </span>
         </header>
         <main>
@@ -425,6 +434,7 @@ export default function App() {
                       ['players', 'Players'],
                       ['history', 'Match history'],
                       ['roadmap', 'What’s next'],
+                      ['data', 'Data & backups'],
                     ] as const
                   ).map(([route, label]) => (
                     <button
@@ -455,9 +465,11 @@ export default function App() {
                     ? 'Every visit counts.'
                     : tab === 'players'
                       ? 'Your players. Their game.'
-                      : tab === 'ui'
-                        ? 'Interface foundation.'
-                        : 'Beyond the scoreboard.'}
+                      : tab === 'data'
+                        ? 'Keep your game safe.'
+                        : tab === 'ui'
+                          ? 'Interface foundation.'
+                          : 'Beyond the scoreboard.'}
               </h1>
               <p>
                 {tab === 'score'
@@ -466,7 +478,9 @@ export default function App() {
                     ? 'Saved matches, player stats and every visit at the board.'
                     : tab === 'players'
                       ? 'A familiar line-up, with a record that grows with every match.'
-                      : 'One home for your game, your team and your competition.'}
+                      : tab === 'data'
+                        ? 'Back up, review and restore your local players and results.'
+                        : 'One home for your game, your team and your competition.'}
               </p>
             </div>
             <div className="heading-actions">
@@ -506,15 +520,15 @@ export default function App() {
               {archiveError}{' '}
               <button
                 className="text-button"
-                onClick={() => {
+                onClick={async () => {
                   if (
                     window.confirm(
                       'Reset the unreadable match archive? This cannot be undone.',
                     )
                   ) {
                     try {
-                      localStorage.removeItem(archiveKey);
-                      setArchiveError('');
+                      await repository.resetLegacy('archive');
+                      window.location.reload();
                     } catch {
                       setArchiveError(
                         'Browser storage is unavailable. The archive could not be reset.',
@@ -688,19 +702,26 @@ export default function App() {
                             ) as [string, string],
                           });
                         }}
-                        onSave={() => {
-                          const player = playerStore.add(name);
+                        onSave={async () => {
+                          const player = await playerStore.add(name);
                           if (!player) return;
-                          const ids: [string | null, string | null] = [
-                            ...(setup.playerIds ?? [null, null]),
-                          ];
-                          ids[index] = player.id;
-                          setSetup({
-                            ...setup,
-                            playerIds: ids,
-                            players: setup.players.map((p, i) =>
-                              i === index ? player.name : p,
-                            ) as [string, string],
+                          setSetup((previous) => {
+                            if (
+                              previous.players[index] !== name ||
+                              (index === 1 && previous.bot)
+                            )
+                              return previous;
+                            const ids: [string | null, string | null] = [
+                              ...(previous.playerIds ?? [null, null]),
+                            ];
+                            ids[index] = player.id;
+                            return {
+                              ...previous,
+                              playerIds: ids,
+                              players: previous.players.map((p, i) =>
+                                i === index ? player.name : p,
+                              ) as [string, string],
+                            };
                           });
                         }}
                       />
@@ -1217,6 +1238,17 @@ export default function App() {
             />
           )}
           {import.meta.env.DEV && tab === 'ui' && <ComponentGallery />}
+          {tab === 'data' && (
+            <DataManager
+              repository={repository}
+              availableData={{
+                ...repository.document.data,
+                current: session,
+                archive: archives,
+                players: playerStore.players,
+              }}
+            />
+          )}
           {tab === 'roadmap' && (
             <section className="roadmap">
               <div className="roadmap-intro">

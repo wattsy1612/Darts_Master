@@ -34,6 +34,7 @@ export type Command = { type: 'visit'; visit: Visit } | { type: 'next-leg' };
 export type Session = {
   version: 1;
   id?: string;
+  imported?: { sourceId: string; importedAt: string };
   setup: Setup;
   commands: Command[];
 };
@@ -52,11 +53,15 @@ const values = [
 ];
 const doubles = [...Array.from({ length: 20 }, (_, i) => (i + 1) * 2), 50];
 
+const possibleTotals = [new Set([0])];
+for (let count = 1; count <= 3; count++) {
+  const totals = new Set<number>();
+  for (const previous of possibleTotals[count - 1])
+    for (const value of values) totals.add(previous + value);
+  possibleTotals.push(totals);
+}
 function possible(total: number, darts: number): boolean {
-  if (darts === 0) return total === 0;
-  return values.some(
-    (value) => value <= total && possible(total - value, darts - 1),
-  );
+  return possibleTotals[darts]?.has(total) ?? false;
 }
 
 export function createMatch(setup: Setup): Match {
@@ -196,11 +201,17 @@ export function replay(session: Session): Match {
     session.commands.length > 10000
   )
     throw new Error('Saved match is invalid.');
-  return session.commands.reduce((match, command) => {
-    if (command?.type === 'visit') return recordVisit(match, command.visit);
-    if (command?.type === 'next-leg') return nextLeg(match);
-    throw new Error('Saved match contains an unknown action.');
-  }, createMatch(session.setup));
+  let match = createMatch(session.setup);
+  const visits: RecordedVisit[] = [];
+  for (const command of session.commands) {
+    if (command?.type === 'visit') {
+      const next = recordVisit({ ...match, visits: [] }, command.visit);
+      visits.push(next.visits[0]);
+      match = { ...next, visits };
+    } else if (command?.type === 'next-leg') match = nextLeg(match);
+    else throw new Error('Saved match contains an unknown action.');
+  }
+  return match;
 }
 
 export function playerStats(match: Match, player: number) {

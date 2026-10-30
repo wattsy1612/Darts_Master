@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { readWorkspace, failWrites } from './storage';
 
 // Retain explicit coverage for the visit-total input alongside board tests.
 test.beforeEach(async ({ page }) => {
@@ -99,13 +100,9 @@ test('archives a completed match, supports corrections and exports the result', 
   await expect(
     page.getByRole('article', { name: 'Player 1 score' }).locator('.remaining'),
   ).toHaveText('121');
-  expect(
-    await page.evaluate(
-      () =>
-        JSON.parse(localStorage.getItem('darts-master.archive.v1')!).matches
-          .length,
-    ),
-  ).toBe(0);
+  await expect
+    .poll(async () => (await readWorkspace(page))?.data.archive.length)
+    .toBe(0);
   await page.getByRole('button', { name: 'Redo', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'Player 1 wins the match!' }),
@@ -195,11 +192,7 @@ test('upgrades an older saved match without losing its scores', async ({
   await expect(
     page.getByRole('article', { name: 'Guest score' }).locator('.remaining'),
   ).toHaveText('441');
-  expect(
-    await page.evaluate(
-      () => JSON.parse(localStorage.getItem('darts-master.match.v1')!).id,
-    ),
-  ).toBeTruthy();
+  expect((await readWorkspace(page))?.data.current?.id).toBeTruthy();
 });
 
 test('preserves an unreadable archive while allowing local play', async ({
@@ -224,14 +217,7 @@ test('preserves an unreadable archive while allowing local play', async ({
 test('protects an unsaved completed result if archive storage is full', async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    const original = Storage.prototype.setItem;
-    Storage.prototype.setItem = function (key, value) {
-      if (key === 'darts-master.archive.v1')
-        throw new DOMException('Full', 'QuotaExceededError');
-      return original.call(this, key, value);
-    };
-  });
+  await failWrites(page, 'archive');
   await page.goto('/');
   await page.getByLabel('Starting score').selectOption('301');
   await page.getByLabel('First to').selectOption('1');

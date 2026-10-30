@@ -73,8 +73,8 @@ export default function PlayerProfiles({
 }: {
   players: Player[];
   archives: ArchivedMatch[];
-  onAdd: (name: string) => Player | null;
-  onRename: (id: string, name: string) => boolean;
+  onAdd: (name: string) => Promise<Player | null>;
+  onRename: (id: string, name: string) => Promise<boolean>;
   onPlay: (player: Player) => void;
 }) {
   const [name, setName] = useState('');
@@ -107,9 +107,9 @@ export default function PlayerProfiles({
           </p>
         </div>
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            if (onAdd(name)) setName('');
+            if (await onAdd(name)) setName('');
           }}
         >
           <label>
@@ -186,9 +186,9 @@ export default function PlayerProfiles({
               {editing === player.id && (
                 <form
                   className="rename-form"
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault();
-                    if (onRename(player.id, rename)) setEditing(null);
+                    if (await onRename(player.id, rename)) setEditing(null);
                   }}
                 >
                   <label>

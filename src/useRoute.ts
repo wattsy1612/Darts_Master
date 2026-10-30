@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-export type Route = 'score' | 'history' | 'players' | 'roadmap' | 'ui';
+export type Route = 'score' | 'history' | 'players' | 'roadmap' | 'ui' | 'data';
 const paths: Record<Route, string> = {
   score: 'play',
   history: 'history',
   players: 'players',
   roadmap: 'roadmap',
   ui: 'design-system',
+  data: 'data',
 };
 function read(): Route {
   const slug = window.location.hash.replace(/^#\/?/, '').replace(/\/$/, '');

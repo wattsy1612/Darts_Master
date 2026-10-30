@@ -53,7 +53,7 @@ Practice opponents generate individual darts with different hit/miss probabiliti
 
 Saved players are local profiles, not registered accounts. Select a saved player before starting a game to link that result; guest matches are not automatically attached by matching names. Profile statistics use the latest 100 completed matches retained in this browser.
 
-The current match and latest 100 completed matches stay in this browser's local storage. Starting a new match replaces an unfinished game only after confirmation; completed results remain in history. Export a match as JSON to keep a separate copy. Clearing browser data removes local results. There is no account or cloud sync yet. External fonts use system fallbacks if unavailable.
+The current match, saved players and latest 100 completed matches stay in this browser’s IndexedDB database. Older local-storage saves migrate automatically while their original copies are preserved. Starting a new match replaces an unfinished game only after confirmation; completed results remain in history. Use Data & backups to download a full backup or review and import a backup or individual match export. Imports require explicit player links, skip duplicates and preserve a pre-import recovery copy. Undo is available until another change is saved. Import limits are 20 MB, 100 players and 100 archived results; oversized combinations are rejected without trimming existing data. Clearing browser data removes local results. There is no account or cloud sync yet. External fonts use system fallbacks if unavailable.
 
 ## Checks and development tools
 

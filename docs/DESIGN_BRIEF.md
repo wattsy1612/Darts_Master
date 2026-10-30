@@ -14,7 +14,7 @@ This is the experience workstream for the [full implementation plan](IMPLEMENTAT
 
 ## 2. Research and validation deliverables — UX-01–04
 
-- Document the primary player, scorer, captain and organiser jobs; identify the first audience to serve.
+- Document the primary player, scorer, captain and organiser jobs; cover home/remote players, club/team users and organisers in the first polished release, as confirmed by the owner.
 - Observe real scoring sessions on the Dell, a phone and a board-side tablet. Include a new user, a regular darts player and someone operating the scorer for other people.
 - Compare the same tasks in a small set of current darts products: start a match, enter/correct a visit, finish a leg, connect a board, join a remote match and run an event. Date the audit and use observed evidence, not remembered feature claims.
 - Record the current prototype’s friction: repeated headings/chrome, essential controls below the fold, tiny metadata, ambiguous saved/unsaved state, and the growing setup form. Validate these observations during real use.

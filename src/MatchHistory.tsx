@@ -63,6 +63,11 @@ export default function MatchHistory({
         </label>
         {match ? (
           <>
+            {session?.imported && (
+              <p className="notice">
+                Imported match · not a verified online or tournament record.
+              </p>
+            )}
             <div className="result-banner">
               <span className="eyebrow">
                 {match.winner === null ? 'MATCH IN PROGRESS' : 'FINAL RESULT'}

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { readWorkspace } from './storage';
 
 test('plays a practice opponent and undo/redo restores the pair of visits', async ({
   page,
@@ -26,9 +27,7 @@ test('plays a practice opponent and undo/redo restores the pair of visits', asyn
     .getByRole('article', { name: 'Practice Bot score' })
     .locator('.remaining')
     .textContent();
-  const before = await page.evaluate(() =>
-    localStorage.getItem('darts-master.match.v1'),
-  );
+  const before = JSON.stringify((await readWorkspace(page))?.data.current);
   await page.getByRole('button', { name: 'Undo last action' }).click();
   await expect(
     page.getByRole('article', { name: 'Player 1 score' }).locator('.remaining'),
@@ -47,9 +46,9 @@ test('plays a practice opponent and undo/redo restores the pair of visits', asyn
       .getByRole('article', { name: 'Practice Bot score' })
       .locator('.remaining'),
   ).toHaveText(botScore!);
-  expect(
-    await page.evaluate(() => localStorage.getItem('darts-master.match.v1')),
-  ).toBe(before);
+  await expect
+    .poll(async () => JSON.stringify((await readWorkspace(page))?.data.current))
+    .toBe(before);
   await page.reload();
   await expect(
     page.getByText('PRACTICE · ROOKIE', { exact: true }),
@@ -75,13 +74,7 @@ test('lets the opponent start and can pause and resume its turn', async ({
     page.getByRole('button', { name: 'Treble 20', exact: true }),
   ).toHaveAttribute('aria-disabled', 'true');
   await page.waitForTimeout(1800);
-  expect(
-    await page.evaluate(
-      () =>
-        JSON.parse(localStorage.getItem('darts-master.match.v1')!).commands
-          .length,
-    ),
-  ).toBe(0);
+  expect((await readWorkspace(page))?.data.current?.commands.length).toBe(0);
   await page
     .getByRole('button', { name: 'Resume opponent', exact: true })
     .click();
@@ -125,13 +118,7 @@ test('resumes exactly one pending opponent turn after a refresh', async ({
   await page
     .getByRole('button', { name: 'Pause opponent', exact: true })
     .click();
-  expect(
-    await page.evaluate(
-      () =>
-        JSON.parse(localStorage.getItem('darts-master.match.v1')!).commands
-          .length,
-    ),
-  ).toBe(2);
+  expect((await readWorkspace(page))?.data.current?.commands.length).toBe(2);
   await expect(
     page.getByRole('article', { name: 'Player 1 score' }).locator('.remaining'),
   ).toHaveText('401');

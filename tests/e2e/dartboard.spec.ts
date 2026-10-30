@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { readWorkspace } from './storage';
 
 test('the scoring front has an interactive board and records three darts', async ({
   page,
@@ -177,11 +178,8 @@ test('records an early bust with one actual dart and updates averages correctly'
       .locator('.stats strong')
       .first(),
   ).toHaveText('120.0');
-  const last = await page.evaluate(
-    () =>
-      JSON.parse(localStorage.getItem('darts-master.match.v1')!).commands.at(-1)
-        .visit,
-  );
+  const command = (await readWorkspace(page))?.data.current?.commands.at(-1);
+  const last = command?.type === 'visit' ? command.visit : null;
   expect(last).toMatchObject({
     total: 20,
     darts: 1,

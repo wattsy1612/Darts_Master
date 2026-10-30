@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { failWrites } from './storage';
 
 test('creates a profile, links a result and keeps it linked after a rename', async ({
   page,
@@ -100,14 +101,7 @@ test('keeps unreadable profile data until the user chooses to reset it', async (
 test('reports a profile storage failure without pretending a player was saved', async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    const original = Storage.prototype.setItem;
-    Storage.prototype.setItem = function (key, value) {
-      if (key === 'darts-master.players.v1')
-        throw new DOMException('Full', 'QuotaExceededError');
-      return original.call(this, key, value);
-    };
-  });
+  await failWrites(page, 'players');
   await page.goto('/');
   await page.getByRole('button', { name: 'Players', exact: true }).click();
   await page.getByLabel('New player name').fill('Alice');

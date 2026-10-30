@@ -22,7 +22,7 @@ The intended differentiators are a clear playing experience, reliable scoring, c
 
 ### Working assumptions requiring validation
 
-- Start with an English-language, UK-focused web product, designed for later localisation.
+- First public release serves home and remote players, clubs/venues, teams and tournament organisers together. English is the development language; launch territories and localisation need explicit decisions.
 - Windows on the Dell is the first hardware test host; browser clients cover desktop, phone and tablet. TV is initially a display/spectator client.
 - Manual local play remains usable without registration. Accounts are required for cloud-owned data and public online activity.
 - Public commercial release is a possible destination. Pricing, subscriptions, age policy, launch territories and the business entity remain undecided.
@@ -72,9 +72,11 @@ An account, a player profile, a team and a physical board are separate entities.
 | Connected alpha                 | Pair a tested board input and complete games with corrections                                                                                                  | Hardware and adapter conformance pass; manual fallback remains available        |
 | Private online beta             | Register, migrate chosen local data and play an invited opponent                                                                                               | Account, authoritative scoring, permissions and reconnect gates pass            |
 | Club beta                       | Run team sessions, an initial tournament and private video matches                                                                                             | Organiser/referee workflows, moderation and media recovery pass                 |
-| Public v1                       | Use the branded product for local and supported automatic scoring, invited/public rooms, teams, core tournaments, profiles and supported live video/spectating | Public-release checklist passes; compatibility and service limits are published |
+| Public v1                       | Serve home/remote players, clubs/venues, teams, league and tournament organisers, and spectators with the confirmed scoring, account, competition and media capabilities | Public-release checklist passes; compatibility and service limits are published |
 | Expanded platform               | Additional games/providers, advanced leagues/rankings, richer training/replays and optional commercial features                                                | Each expansion passes its own evidence and cost gate                            |
 | Detection / appliance programme | Evaluate independent scoring and compact hardware                                                                                                              | Separately validated accuracy, rights, hardware and support case                |
+
+Owner clarification: the first polished public release is for all of these audiences. Alpha/beta milestones are internal validation stages, not approval to launch a cut-down single-audience product. Full registration is later in development order, but belongs in that public release.
 
 No calendar launch date is committed here. Dates depend on validated scope, provider access, actual hardware tests, available development capacity and feedback. Estimate each milestone after its first technical spike and screen prototype.
 
@@ -367,7 +369,7 @@ Some work can overlap, especially design and hardware discovery, but dependencie
 
 | Decision / risk                                                   | Needed by                                 | How it is resolved                                                                                        |
 | ----------------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Primary users: home players, online community or venue/club first | A                                         | Interview/test with the intended users and prioritise the first release journeys                          |
+| Primary users: home players, online community or venue/club first | A                                         | Owner confirmed all audiences for the first polished release; test all core role journeys and sequence their technical dependencies                          |
 | Final name and identity                                           | Before public launch                      | Real darts-led naming shortlist, availability screens and visual testing; no invented availability claims |
 | Paid/free boundaries and budget                                   | Before provider commitments/public launch | Measure expected identity, database, relay and recording costs; decide commercial scope                   |
 | Account/profile/household ownership and guest claiming            | D                                         | Explicit data and permission model with migration prototype                                               |
