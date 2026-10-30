@@ -33,6 +33,12 @@ test('creates a profile, links a result and keeps it linked after a rename', asy
     .click();
   await page.getByLabel('Rename player').fill('Chris');
   await page.getByRole('button', { name: 'Save name', exact: true }).click();
+  // The renamed heading is shown only after the IndexedDB transaction commits.
+  await expect(
+    page
+      .getByRole('article', { name: 'Chris profile' })
+      .getByRole('heading', { name: 'Chris', exact: true }),
+  ).toBeVisible();
   await page.reload();
   await page.getByRole('button', { name: 'Players', exact: true }).click();
   await expect(
