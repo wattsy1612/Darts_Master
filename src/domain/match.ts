@@ -40,11 +40,17 @@ export type Match = {
   leg: number;
   legWinner: number | null;
   winner: number | null;
+  status: 'active' | 'paused' | 'completed' | 'conceded' | 'abandoned';
+  concededBy: 0 | 1 | null;
   visits: RecordedVisit[];
 };
-export type Command = { type: 'visit'; visit: Visit } | { type: 'next-leg' };
+export type Command =
+  | { type: 'visit'; visit: Visit }
+  | { type: 'next-leg' }
+  | { type: 'pause' | 'resume' | 'abandon' }
+  | { type: 'concede'; player: 0 | 1 };
 export type Session = {
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   id?: string;
   imported?: { sourceId: string; importedAt: string };
   setup: Setup;
@@ -131,11 +137,15 @@ export function createMatch(setup: Setup): Match {
     leg: 1,
     legWinner: null,
     winner: null,
+    status: 'active',
+    concededBy: null,
     visits: [],
   };
 }
 
 export function recordVisit(match: Match, visit: Visit): Match {
+  if (match.status !== 'active')
+    throw new Error('Resume an active match before recording darts.');
   if (match.legWinner !== null)
     throw new Error(
       'This leg is finished. Start the next leg or undo the last visit.',
@@ -231,6 +241,7 @@ export function recordVisit(match: Match, visit: Visit): Match {
     turn: checkout ? player : 1 - player,
     legWinner: checkout ? player : null,
     winner,
+    status: winner !== null ? 'completed' : 'active',
     visits: [
       ...match.visits,
       {
@@ -248,7 +259,9 @@ export function recordVisit(match: Match, visit: Visit): Match {
 }
 
 export function nextLeg(match: Match): Match {
-  if (match.winner !== null) throw new Error('The match is finished.');
+  if (isTerminal(match)) throw new Error('The match is finished.');
+  if (match.status !== 'active')
+    throw new Error('Resume the match before starting the next leg.');
   if (match.legWinner === null) throw new Error('Finish this leg first.');
   const nextSet = match.setWinner !== null;
   const set = match.set + (nextSet ? 1 : 0);
@@ -276,7 +289,7 @@ export function nextLeg(match: Match): Match {
 export function replay(session: Session): Match {
   if (
     !session ||
-    ![1, 2].includes(session.version) ||
+    ![1, 2, 3].includes(session.version) ||
     !Array.isArray(session.commands) ||
     session.commands.length > 10000
   )
@@ -293,6 +306,11 @@ export function replay(session: Session): Match {
       ))
   )
     throw new Error('New rule settings require saved-match version 2.');
+  if (
+    session.version < 3 &&
+    session.commands.some((c) => c?.type !== 'visit' && c?.type !== 'next-leg')
+  )
+    throw new Error('Match lifecycle actions require saved-match version 3.');
   let match = createMatch(session.setup);
   const visits: RecordedVisit[] = [];
   for (const command of session.commands) {
@@ -301,7 +319,7 @@ export function replay(session: Session): Match {
       visits.push(next.visits[0]);
       match = { ...next, visits };
     } else if (command?.type === 'next-leg') match = nextLeg(match);
-    else throw new Error('Saved match contains an unknown action.');
+    else match = lifecycle(match, command);
   }
   return match;
 }
@@ -388,4 +406,64 @@ export function formatSummary(setup: Setup) {
   return setup.setsToWin
     ? `First to ${setup.setsToWin} ${setup.setsToWin === 1 ? 'set' : 'sets'} · First to ${setup.legsToWin} ${setup.legsToWin === 1 ? 'leg' : 'legs'} per set`
     : `First to ${setup.legsToWin} ${setup.legsToWin === 1 ? 'leg' : 'legs'}`;
+}
+
+export function isTerminal(match: Match) {
+  return (
+    match.status === 'completed' ||
+    match.status === 'conceded' ||
+    match.status === 'abandoned'
+  );
+}
+export function lifecycle(match: Match, command: Command): Match {
+  if (isTerminal(match))
+    throw new Error(
+      'The match is finished. Undo its final action to correct it.',
+    );
+  if (command?.type === 'pause') {
+    if (match.status !== 'active')
+      throw new Error('The match is already paused.');
+    return { ...match, status: 'paused' };
+  }
+  if (command?.type === 'resume') {
+    if (match.status !== 'paused') throw new Error('The match is not paused.');
+    return { ...match, status: 'active' };
+  }
+  if (command?.type === 'abandon')
+    return { ...match, status: 'abandoned', winner: null };
+  if (command?.type === 'concede') {
+    if (command.player !== 0 && command.player !== 1)
+      throw new Error('Choose which player is conceding.');
+    return {
+      ...match,
+      status: 'conceded',
+      concededBy: command.player,
+      winner: 1 - command.player,
+    };
+  }
+  throw new Error('Saved match contains an unknown action.');
+}
+export function rematch(session: Session, id: string, starter: 0 | 1): Session {
+  if (!isTerminal(replay(session)))
+    throw new Error('Finish or abandon this match before starting a rematch.');
+  if (
+    typeof id !== 'string' ||
+    !id.trim() ||
+    id === session.id ||
+    id.length > 160
+  )
+    throw new Error('A rematch needs a new match identifier.');
+  return {
+    version: 3,
+    id,
+    setup: createMatch({
+      ...session.setup,
+      players: [...session.setup.players],
+      ...(session.setup.playerIds
+        ? { playerIds: [...session.setup.playerIds] }
+        : {}),
+      starter,
+    }).setup,
+    commands: [],
+  };
 }

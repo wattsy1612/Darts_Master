@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { dartLabel } from './domain/darts';
 import { difficulties } from './domain/bot';
 import { ruleSummary } from './domain/x01';
-import { playerStats, replay, formatSummary } from './domain/match';
+import { playerStats, replay, formatSummary, isTerminal } from './domain/match';
 import type { Session } from './domain/match';
 import { exportMatch } from './domain/archive';
 import type { ArchivedMatch } from './domain/archive';
@@ -57,6 +57,7 @@ export default function MatchHistory({
             {archives.map((entry) => (
               <option key={entry.session.id} value={entry.session.id}>
                 {entry.session.setup.players.join(' vs ')} ·{' '}
+                {replay(entry.session).status} ·{' '}
                 {new Date(entry.completedAt).toLocaleString()}
               </option>
             ))}
@@ -71,12 +72,22 @@ export default function MatchHistory({
             )}
             <div className="result-banner">
               <span className="eyebrow">
-                {match.winner === null ? 'MATCH IN PROGRESS' : 'FINAL RESULT'}
+                {match.status === 'abandoned'
+                  ? 'ABANDONED · NO WINNER'
+                  : match.status === 'paused'
+                    ? 'MATCH PAUSED'
+                    : match.status === 'conceded'
+                      ? 'DECIDED BY CONCESSION'
+                      : isTerminal(match)
+                        ? 'FINAL RESULT'
+                        : 'MATCH IN PROGRESS'}
               </span>
               <h2>
-                {match.winner === null
-                  ? match.setup.players.join(' vs ')
-                  : `${match.setup.players[match.winner]} wins`}
+                {match.status === 'abandoned'
+                  ? 'Match abandoned'
+                  : match.winner === null
+                    ? match.setup.players.join(' vs ')
+                    : `${match.setup.players[match.winner]} wins${match.status === 'conceded' ? ' by concession' : ''}`}
               </h2>
               <div className="result-score">
                 {match.setup.setsToWin ? match.sets[0] : match.legs[0]}{' '}
@@ -123,6 +134,38 @@ export default function MatchHistory({
                 );
               })}
             </div>
+            {(match.status === 'conceded' || match.status === 'abandoned') && (
+              <p className="notice">
+                Only played scores and legs are shown.{' '}
+                {match.status === 'abandoned'
+                  ? 'This match has no winner and is excluded from win/loss records.'
+                  : 'The concession counts as a match win/loss; unplayed legs and sets are not awarded.'}
+              </p>
+            )}
+            {session?.commands.some(
+              (c) => c.type !== 'visit' && c.type !== 'next-leg',
+            ) && (
+              <section aria-label="Match action history">
+                <h2>Match actions</h2>
+                <ol>
+                  {session.commands
+                    .filter((c) => c.type !== 'visit' && c.type !== 'next-leg')
+                    .map((c, i) => (
+                      <li key={i}>
+                        {c.type === 'pause'
+                          ? 'Match paused'
+                          : c.type === 'resume'
+                            ? 'Match resumed'
+                            : c.type === 'abandon'
+                              ? 'Match abandoned without a winner'
+                              : c.type === 'concede'
+                                ? `${match.setup.players[c.player]} conceded`
+                                : ''}
+                      </li>
+                    ))}
+                </ol>
+              </section>
+            )}
             <h2>Visit by visit</h2>
             {match.visits.length ? (
               <div className="table-scroll">
@@ -178,7 +221,7 @@ export default function MatchHistory({
           <p className="muted">Start a match to see your statistics here.</p>
         )}
         <p className="entry-hint">
-          {archives.length} completed{' '}
+          {archives.length} finished{' '}
           {archives.length === 1 ? 'match' : 'matches'} saved on this browser.
           The latest 100 are kept. Export results to keep a separate copy;
           clearing browser data removes local history.

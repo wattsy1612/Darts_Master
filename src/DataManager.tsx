@@ -16,7 +16,7 @@ import type { ImportOptions, IncomingBackup } from './data/backup';
 import { inspectFileText } from './data/inspectFile';
 import { validateDocument } from './data/workspace';
 import type { WorkspaceData } from './data/workspace';
-import { replay } from './domain/match';
+import { replay, isTerminal } from './domain/match';
 import ActionButton from './ui/ActionButton';
 import { OfflineSettings } from './OfflineSupport';
 
@@ -377,7 +377,7 @@ export default function DataManager({
               </>
             )}
             {incoming.data.current &&
-              replay(incoming.data.current).winner === null && (
+              !isTerminal(replay(incoming.data.current)) && (
                 <label className="replace-confirm">
                   <input
                     type="checkbox"

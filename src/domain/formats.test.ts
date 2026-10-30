@@ -60,7 +60,7 @@ describe('configurable X01', () => {
     expect(() =>
       replay({ ...old, setup: { ...old.setup, start: 101 } }),
     ).toThrow(/version 2/);
-    expect(() => normaliseSession({ ...old, version: 3 })).toThrow();
+    expect(() => normaliseSession({ ...old, version: 99 })).toThrow();
   });
   it.each([101, 201, 401, 500, 1001])(
     'accepts configured starting score %s',

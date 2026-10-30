@@ -37,7 +37,7 @@ export function normaliseSession(value: unknown): Session {
   const input = value as Session;
   if (
     !input ||
-    ![1, 2].includes(input.version) ||
+    ![1, 2, 3].includes(input.version) ||
     !Array.isArray(input.commands) ||
     input.commands.length > 10000
   )
@@ -59,7 +59,15 @@ export function normaliseSession(value: unknown): Session {
     setup.starterPolicy = settings.starterPolicy;
   const checked = createMatch(setup).setup;
   const commands: Command[] = input.commands.map((command) => {
-    if (command?.type === 'next-leg') return { type: 'next-leg' };
+    if (
+      command?.type === 'next-leg' ||
+      command?.type === 'pause' ||
+      command?.type === 'resume' ||
+      command?.type === 'abandon'
+    )
+      return { type: command.type };
+    if (command?.type === 'concede')
+      return { type: 'concede', player: command.player };
     if (command?.type !== 'visit' || !command.visit)
       throw new Error('The match contains an unknown action.');
     const v = command.visit;

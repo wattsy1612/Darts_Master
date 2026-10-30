@@ -1,6 +1,6 @@
 import { matchId } from '../domain/archive';
 import { readPlayers } from '../domain/players';
-import { replay } from '../domain/match';
+import { replay, isTerminal } from '../domain/match';
 import type { Session } from '../domain/match';
 import type { ArchivedMatch } from '../domain/archive';
 import type { WorkspaceData } from './workspace';
@@ -73,7 +73,7 @@ export function inspectBackup(text: string): IncomingBackup {
     const current = sessionWithId(input.session);
     // A stand-alone match file does not establish ownership of saved profiles.
     current.setup = { ...current.setup, playerIds: undefined };
-    const completed = replay(current).winner !== null;
+    const completed = isTerminal(replay(current));
     return {
       createdAt: now,
       data: {
@@ -116,7 +116,7 @@ export function inspectBackup(text: string): IncomingBackup {
     const same = data.archive.find((entry) => entry.session.id === current.id);
     if (
       same &&
-      (replay(current).winner === null ||
+      (!isTerminal(replay(current)) ||
         sessionContent(same.session) !== sessionContent(current))
     )
       throw new Error(
@@ -125,7 +125,7 @@ export function inspectBackup(text: string): IncomingBackup {
   }
   if (
     current &&
-    replay(current).winner !== null &&
+    isTerminal(replay(current)) &&
     !archive.some((entry) => entry.session.id === current.id)
   )
     data.archive.unshift({ session: current, completedAt: now });
@@ -284,7 +284,7 @@ export function buildImportPlan(
   if (
     options.resumeCurrent &&
     incoming.data.current &&
-    replay(incoming.data.current).winner === null
+    !isTerminal(replay(incoming.data.current))
   ) {
     const candidate = incoming.data.current;
     if (

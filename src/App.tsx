@@ -12,6 +12,7 @@ import DataManager from './DataManager';
 import { useVisitDraft } from './useVisitDraft';
 import { OfflineIndicator } from './OfflineSupport';
 import { turnIdentity } from './data/draft';
+import { hasDraft } from './data/draft';
 import { ruleSummary, rulesFor } from './domain/x01';
 import { browserRepository } from './data/repository';
 import type { LocalRepository } from './data/repository';
@@ -21,6 +22,8 @@ import type { Command, Session, Setup } from './domain/match';
 import {
   checkoutRoute,
   formatSummary,
+  isTerminal,
+  rematch,
   createMatch,
   playerStats,
   replay,
@@ -78,6 +81,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     savedArchive.matches,
   );
   const [archiveError, setArchiveError] = useState(savedArchive.warning);
+  const [rematchStarter, setRematchStarter] = useState<0 | 1 | null>(null);
   const [redoGroups, setRedoGroups] = useState<Command[][]>([]);
   const [botPaused, setBotPaused] = useState(() => {
     try {
@@ -107,7 +111,10 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
   });
   const match = useMemo(() => (session ? replay(session) : null), [session]);
   const botTurn =
-    !!match?.setup.bot && match.turn === 1 && match.legWinner === null;
+    !!match?.setup.bot &&
+    match.status === 'active' &&
+    match.turn === 1 &&
+    match.legWinner === null;
   const visitDraft = useVisitDraft(
     session,
     saveState === 'saved' &&
@@ -115,6 +122,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
       !!repository.document.data.current &&
       turnIdentity(session) === turnIdentity(repository.document.data.current),
     !!match &&
+      match.status === 'active' &&
       match.legWinner === null &&
       !botTurn &&
       repository.mode === 'database',
@@ -158,24 +166,27 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
   }, [playing, focusMode]);
   const entryBlocked =
     !match ||
+    match.status !== 'active' ||
     match.legWinner !== null ||
     botTurn ||
     visitDraft.loading ||
     !!visitDraft.recovery;
-  const route = match
-    ? checkoutRoute(
-        match.scores[match.turn],
-        3,
-        rules.outRule,
-        !match.opened[match.turn],
-      )
-    : null;
+  const route =
+    match?.status === 'active'
+      ? checkoutRoute(
+          match.scores[match.turn],
+          3,
+          rules.outRule,
+          !match.opened[match.turn],
+        )
+      : null;
   const resultSaved =
     !!session && archives.some((entry) => entry.session.id === session.id);
   const replacementNeedsConfirmation =
     !!match &&
-    match.visits.length > 0 &&
-    (match.winner === null || !resultSaved);
+    (isTerminal(match)
+      ? !resultSaved
+      : match.visits.length > 0 || match.status === 'paused');
   const finishing =
     !!match && score !== '' && Number(score) === match.scores[match.turn];
 
@@ -222,17 +233,29 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     if (!session) return;
     const next: Session = {
       ...session,
+      version:
+        command.type === 'visit' || command.type === 'next-leg'
+          ? session.version
+          : 3,
       commands: [...session.commands, command],
     };
     try {
       const result = replay(next);
       const last = result.visits.at(-1);
       setAnnouncement(
-        command.type === 'next-leg'
-          ? `${result.setup.setsToWin ? `Set ${result.set}. ` : ''}Leg ${result.leg}. ${result.setup.players[result.turn]} throws first.`
-          : last
-            ? `${result.setup.players[last.player]}: ${last.bust ? 'bust. Score unchanged.' : last.checkout ? `${last.total}. Game shot!` : `${last.total} scored. ${result.scores[last.player]} remaining.`}`
-            : '',
+        command.type === 'pause'
+          ? 'Match paused.'
+          : command.type === 'resume'
+            ? 'Match resumed.'
+            : command.type === 'abandon'
+              ? 'Match abandoned. No winner awarded.'
+              : command.type === 'concede'
+                ? `${result.setup.players[command.player]} conceded the match.`
+                : command.type === 'next-leg'
+                  ? `${result.setup.setsToWin ? `Set ${result.set}. ` : ''}Leg ${result.leg}. ${result.setup.players[result.turn]} throws first.`
+                  : last
+                    ? `${result.setup.players[last.player]}: ${last.bust ? 'bust. Score unchanged.' : last.checkout ? `${last.total}. Game shot!` : `${last.total} scored. ${result.scores[last.player]} remaining.`}`
+                    : '',
       );
       setRedoGroups([]);
       setSession(next);
@@ -244,6 +267,47 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
       setError(e instanceof Error ? e.message : 'Unable to record score.');
     }
   }
+  function control(command: Command) {
+    const discards = hasDraft(visitDraft.value) || !!visitDraft.recovery;
+    const message =
+      command.type === 'concede'
+        ? `${match!.setup.players[command.player]} concedes this match. The opponent receives the match win; no unplayed legs are awarded.`
+        : command.type === 'abandon'
+          ? 'Abandon this match with no winner? The played scores stay in history and do not count toward win/loss records.'
+          : 'Pause this match?';
+    if (
+      (command.type === 'concede' || command.type === 'abandon' || discards) &&
+      !window.confirm(
+        message +
+          (discards
+            ? ' The unsubmitted visit draft will be discarded. Record it first if you want it counted.'
+            : ''),
+      )
+    )
+      return;
+    append(command);
+  }
+  function startRematch() {
+    if (!session || !match || !resultSaved || saveState !== 'saved') return;
+    const next = rematch(
+      session,
+      matchId(),
+      rematchStarter ?? ((1 - (match.setup.starter ?? 0)) as 0 | 1),
+    );
+    next.setup.players = next.setup.players.map(
+      (name, i) =>
+        playerStore.players.find((p) => p.id === next.setup.playerIds?.[i])
+          ?.name ?? name,
+    ) as [string, string];
+    setSession(next);
+    setSetup(next.setup);
+    setRedoGroups([]);
+    setBotPaused(false);
+    setRematchStarter(null);
+    setError('');
+    setAnnouncement('Rematch started.');
+  }
+
   function submit() {
     if (!score || entryBlocked) return;
     append({
@@ -371,7 +435,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
       }) as [string, string];
       const checked = createMatch({ ...setup, players: linkedNames });
       setSession({
-        version: 2,
+        version: 3,
         id: matchId(),
         setup: checked.setup,
         commands: [],
@@ -447,7 +511,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.9</span>
+          Development build <span>v0.10</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -607,15 +671,19 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                   PRACTICE · {difficulties[match.setup.bot].name.toUpperCase()}
                 </span>
                 <strong>
-                  {match.winner !== null
-                    ? 'Practice match complete'
-                    : match.legWinner !== null
-                      ? 'Leg complete · ready for the next leg'
-                      : botPaused || redoGroups.length
-                        ? 'Opponent paused'
-                        : botTurn
-                          ? 'Opponent is throwing…'
-                          : 'Your turn at the board'}
+                  {isTerminal(match)
+                    ? match.status === 'abandoned'
+                      ? 'Practice abandoned'
+                      : 'Practice match complete'
+                    : match.status === 'paused'
+                      ? 'Match paused'
+                      : match.legWinner !== null
+                        ? 'Leg complete · ready for the next leg'
+                        : botPaused || redoGroups.length
+                          ? 'Opponent paused'
+                          : botTurn
+                            ? 'Opponent is throwing…'
+                            : 'Your turn at the board'}
                 </strong>
                 <small>
                   {redoGroups.length
@@ -623,7 +691,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                     : 'Simulated darts use the same rules as your own throws.'}
                 </small>
               </div>
-              {match.winner === null && (
+              {match.status === 'active' && (
                 <button
                   className="button secondary"
                   onClick={() => {
@@ -963,7 +1031,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                   </p>
                   {match && (
                     <p className="notice">
-                      {match.winner === null
+                      {!isTerminal(match)
                         ? 'Starting a new match replaces your unfinished game.'
                         : resultSaved
                           ? 'This result is saved in match history on this device.'
@@ -977,7 +1045,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                         checked={replaceConfirmed}
                         onChange={(e) => setReplaceConfirmed(e.target.checked)}
                       />
-                      {match?.winner === null
+                      {match && !isTerminal(match)
                         ? 'Replace my unfinished match'
                         : 'Continue without saving this result'}
                     </label>
@@ -1014,10 +1082,104 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
             ) : (
               match && (
                 <>
+                  <section
+                    className="match-controls"
+                    aria-label="Match controls"
+                  >
+                    {match.status === 'paused' && (
+                      <p role="status">
+                        Match paused. Resume to continue from this score and
+                        thrower.
+                      </p>
+                    )}
+                    {!isTerminal(match) ? (
+                      <>
+                        <button
+                          className="button secondary"
+                          disabled={visitDraft.loading}
+                          onClick={() =>
+                            control({
+                              type:
+                                match.status === 'paused' ? 'resume' : 'pause',
+                            })
+                          }
+                        >
+                          {match.status === 'paused'
+                            ? 'Resume match'
+                            : 'Pause match'}
+                        </button>
+                        <details>
+                          <summary>End match</summary>
+                          <div className="end-match-actions">
+                            {match.setup.players.map((name, i) => (
+                              <button
+                                key={i}
+                                className="text-button"
+                                disabled={visitDraft.loading}
+                                onClick={() =>
+                                  control({
+                                    type: 'concede',
+                                    player: i as 0 | 1,
+                                  })
+                                }
+                              >
+                                {name} concedes
+                              </button>
+                            ))}
+                            <button
+                              className="text-button"
+                              disabled={visitDraft.loading}
+                              onClick={() => control({ type: 'abandon' })}
+                            >
+                              Abandon without a winner
+                            </button>
+                          </div>
+                        </details>
+                      </>
+                    ) : (
+                      <>
+                        <label>
+                          Rematch first thrower
+                          <select
+                            value={
+                              rematchStarter ?? 1 - (match.setup.starter ?? 0)
+                            }
+                            onChange={(e) =>
+                              setRematchStarter(Number(e.target.value) as 0 | 1)
+                            }
+                          >
+                            {match.setup.players.map((name, i) => (
+                              <option key={i} value={i}>
+                                {name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <button
+                          className="button secondary"
+                          disabled={!resultSaved || saveState !== 'saved'}
+                          onClick={startRematch}
+                        >
+                          Start rematch
+                        </button>
+                        {!resultSaved && (
+                          <span className="muted">
+                            Save or export this result before replacing it.
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </section>
                   <div className="match-meta">
                     <div>
                       <span className="live-label">
-                        {match.setup.bot ? '● PRACTICE MATCH' : '● LIVE MATCH'}
+                        {isTerminal(match)
+                          ? '● MATCH FINISHED'
+                          : match.status === 'paused'
+                            ? '● PAUSED'
+                            : match.setup.bot
+                              ? '● PRACTICE MATCH'
+                              : '● LIVE MATCH'}
                       </span>
                       <span>
                         {match.setup.start} · {ruleSummary(match.setup)} ·{' '}
@@ -1030,7 +1192,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                     </strong>
                   </div>
                   <div
-                    className={`play-grid ${entryMode === 'board' ? 'dartboard-mode' : ''}`}
+                    className={`play-grid ${entryMode === 'board' ? 'dartboard-mode' : ''} ${match.status !== 'active' ? 'is-stopped' : ''}`}
                   >
                     <div className="score-column">
                       <section
@@ -1041,7 +1203,9 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                           {match.setup.players.map((name, index) => {
                             const stats = playerStats(match, index);
                             const active =
-                              match.turn === index && match.legWinner === null;
+                              match.status === 'active' &&
+                              match.turn === index &&
+                              match.legWinner === null;
                             return (
                               <article
                                 key={index}
@@ -1104,9 +1268,32 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                           })}
                         </div>
                         <div
-                          className={`board-bottom ${match.legWinner === null && !route ? 'empty-guide' : ''}`}
+                          className={`board-bottom ${match.status === 'active' && match.legWinner === null && !route ? 'empty-guide' : ''}`}
                         >
-                          {match.legWinner !== null ? (
+                          {match.status === 'conceded' ||
+                          match.status === 'abandoned' ? (
+                            <>
+                              <span className="eyebrow">
+                                {match.status === 'conceded'
+                                  ? 'CONCESSION'
+                                  : 'NO WINNER AWARDED'}
+                              </span>
+                              <h2>
+                                {match.status === 'abandoned'
+                                  ? 'Match abandoned'
+                                  : `${match.setup.players[match.winner!]} wins by concession`}
+                              </h2>
+                              <p>Only played legs and scores are recorded.</p>
+                              <button
+                                className="button primary"
+                                onClick={() => setTab('history')}
+                              >
+                                View match summary →
+                              </button>
+                            </>
+                          ) : match.status === 'paused' ? (
+                            <h2>Match paused</h2>
+                          ) : match.legWinner !== null ? (
                             <>
                               <span className="eyebrow">
                                 {match.winner !== null
@@ -1245,6 +1432,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                     </div>
                     <section
                       className="entry-panel panel"
+                      hidden={match.status !== 'active'}
                       aria-label="Score entry"
                     >
                       {visitDraft.loading && (

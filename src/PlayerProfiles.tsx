@@ -287,10 +287,11 @@ export default function PlayerProfiles({
         })}
       </div>
       <p className="entry-hint">
-        Statistics use completed matches linked to each profile in this
-        browser’s retained history (latest 100 matches). Guest games and
-        unfinished matches do not count. Renaming a player keeps the profile
-        link and leaves names in old match reports unchanged.
+        Statistics use decided matches linked to each profile in this browser’s
+        retained history (latest 100 matches). Guest games and unfinished or
+        abandoned matches do not count. Concessions count as match outcomes
+        without adding unplayed legs. Renaming a player keeps the profile link
+        and leaves names in old match reports unchanged.
       </p>
     </div>
   );

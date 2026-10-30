@@ -67,7 +67,12 @@ function aimFor(
     : { number: 1, multiplier: 1 };
 }
 export function botVisit(match: Match, seed: string): Visit {
-  if (!match.setup.bot || match.turn !== 1 || match.legWinner !== null)
+  if (
+    !match.setup.bot ||
+    match.turn !== 1 ||
+    match.legWinner !== null ||
+    match.status !== 'active'
+  )
     throw new Error('The practice opponent is not due to throw.');
   const skill = difficulties[match.setup.bot];
   const random = randomFor(seed);

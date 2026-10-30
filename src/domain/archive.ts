@@ -1,4 +1,4 @@
-import { replay } from './match';
+import { replay, isTerminal } from './match';
 import type { Session } from './match';
 
 export type ArchivedMatch = { session: Session; completedAt: string };
@@ -20,7 +20,7 @@ export function readArchive(raw: string | null): ArchivedMatch[] {
       typeof entry?.session?.id !== 'string' ||
       !entry.session.id ||
       !Number.isFinite(Date.parse(entry.completedAt)) ||
-      replay(entry.session).winner === null
+      !isTerminal(replay(entry.session))
     )
       throw new Error('Invalid archived match.');
     return entry;
@@ -34,7 +34,7 @@ export function updateArchive(
   if (!session.id) throw new Error('A saved match needs an identifier.');
   const others = archive.filter((entry) => entry.session.id !== session.id);
   // Undoing the winning visit removes the stale result from the archive.
-  if (replay(session).winner === null) return others;
+  if (!isTerminal(replay(session))) return others;
   const previous = archive.find((entry) => entry.session.id === session.id);
   return [
     { session, completedAt: previous?.completedAt ?? now },
@@ -51,6 +51,9 @@ export function exportMatch(session: Session): string {
       session,
       result: {
         players: match.setup.players,
+        ...(session.version === 3
+          ? { status: match.status, concededBy: match.concededBy }
+          : {}),
         legs: match.legs,
         ...(match.setup.setsToWin ? { sets: match.sets } : {}),
         winner:

@@ -121,8 +121,8 @@ export function playerSummary(
         opponent: match.setup.players[1 - index],
         won: match.winner === index,
         score: match.setup.setsToWin
-          ? `${match.sets[index]}–${match.sets[1 - index]} sets`
-          : `${match.legs[index]}–${match.legs[1 - index]}`,
+          ? `${match.sets[index]}–${match.sets[1 - index]} sets${match.status === 'conceded' ? ' · concession' : ''}`
+          : `${match.legs[index]}–${match.legs[1 - index]}${match.status === 'conceded' ? ' · concession' : ''}`,
         date: entry.completedAt,
       });
   }

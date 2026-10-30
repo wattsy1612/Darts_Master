@@ -738,3 +738,51 @@
 .match-meta > strong {
   flex-shrink: 0;
 }
+
+.match-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+}
+.match-controls label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.match-controls select {
+  min-height: 40px;
+  max-width: 100%;
+  padding: 0.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+}
+.match-controls p {
+  width: 100%;
+  margin: 0;
+}
+.match-controls details {
+  position: relative;
+}
+.match-controls summary {
+  cursor: pointer;
+  padding: 0.75rem;
+}
+.end-match-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+.entry-panel[hidden] {
+  display: none;
+}
+.is-playing .play-grid.is-stopped {
+  grid-template-columns: minmax(0, 1fr);
+}

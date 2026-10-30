@@ -43,6 +43,7 @@ export function validateDraft(value: unknown, session: Session): VisitDraft {
     ![1, 2, 3].includes(d.darts) ||
     typeof d.double !== 'boolean' ||
     (d.opens !== undefined && typeof d.opens !== 'boolean') ||
+    match.status !== 'active' ||
     match.legWinner !== null ||
     (match.setup.bot && match.turn === 1)
   )
