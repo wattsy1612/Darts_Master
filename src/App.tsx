@@ -247,6 +247,13 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
           ...command,
           visit: {
             ...command.visit,
+            source:
+              command.visit.source ??
+              (match.setup.bot && match.turn === 1
+                ? 'simulated'
+                : command.visit.hits
+                  ? 'manual-segments'
+                  : 'manual-total'),
             participantId:
               command.visit.participantId ?? currentThrower(match).id,
           },
@@ -553,7 +560,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.12</span>
+          Development build <span>v0.13</span>
         </div>
       </aside>
       <div className="main-shell">

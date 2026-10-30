@@ -900,3 +900,29 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.score-evidence {
+  margin: 1rem 0;
+  padding: 0.85rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+.score-evidence summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: list-item;
+  align-content: center;
+  font-weight: 700;
+}
+.score-evidence dl > div {
+  margin: 0.65rem 0;
+}
+.score-evidence dt {
+  font-weight: 700;
+}
+.score-evidence dd {
+  margin: 0.15rem 0 0;
+}

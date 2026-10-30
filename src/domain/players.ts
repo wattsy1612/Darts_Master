@@ -1,3 +1,5 @@
+import { visitStatistics } from './metrics';
+import type { RecordedVisit } from './match';
 import { rosterFormat } from './participants';
 import { matchId } from './archive';
 import type { ArchivedMatch } from './archive';
@@ -82,11 +84,9 @@ export function playerSummary(
     wins = 0,
     legsWon = 0,
     legsLost = 0,
-    scored = 0,
-    darts = 0,
-    maximums = 0,
-    best = 0,
-    highestCheckout = 0;
+    importedMatches = 0;
+  const visits: RecordedVisit[] = [];
+  const ruleVariants = new Set<string>();
   const recent: {
     opponent: string;
     won: boolean;
@@ -120,16 +120,11 @@ export function playerSummary(
       (n, value, i) => (i === index ? n : n + value),
       0,
     );
-    for (const visit of match.visits.filter((v) => v.profileId === id)) {
-      darts += visit.darts;
-      if (!visit.bust) {
-        scored += visit.total;
-        best = Math.max(best, visit.total);
-        if (visit.total === 180) maximums++;
-      }
-      if (visit.checkout)
-        highestCheckout = Math.max(highestCheckout, visit.total);
-    }
+    if (entry.session.imported) importedMatches++;
+    ruleVariants.add(
+      `${match.setup.start}/${match.setup.inRule ?? 'straight'}/${match.setup.outRule ?? 'double'}/${match.setup.legsToWin}/${match.setup.setsToWin ?? 0}`,
+    );
+    visits.push(...match.visits.filter((v) => v.profileId === id));
     if (recent.length < 3)
       recent.push({
         opponent: match.sides
@@ -156,11 +151,9 @@ export function playerSummary(
     losses: matches - wins,
     legsWon,
     legsLost,
-    average: darts ? ((scored / darts) * 3).toFixed(1) : '—',
-    darts,
-    maximums,
-    best,
-    highestCheckout,
+    ...visitStatistics(visits),
+    importedMatches,
+    ruleVariants: ruleVariants.size,
     recent,
   };
 }

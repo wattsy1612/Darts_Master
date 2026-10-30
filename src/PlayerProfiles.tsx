@@ -1,3 +1,4 @@
+import ScoreEvidence from './ScoreEvidence';
 import { useMemo, useState } from 'react';
 import { playerSummary } from './domain/players';
 import type { Player } from './domain/players';
@@ -277,6 +278,11 @@ export default function PlayerProfiles({
                   </div>
                 ))}
               </dl>
+              <ScoreEvidence
+                coverage={stats.coverage}
+                importedMatches={stats.importedMatches}
+                ruleVariants={stats.ruleVariants}
+              />
               <div className="profile-recent">
                 <h3>Recent results</h3>
                 {stats.recent.length ? (

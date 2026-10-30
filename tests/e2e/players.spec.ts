@@ -27,7 +27,7 @@ test('creates a profile, links a result and keeps it linked after a rename', asy
   await expect(profile.locator('.profile-record>strong').first()).toContainText(
     '1',
   );
-  await expect(profile.locator('dl')).toContainText('150.5');
+  await expect(profile.locator('.profile-stat-grid')).toContainText('150.5');
   await page
     .getByRole('button', { name: 'Rename Wattsy', exact: true })
     .click();

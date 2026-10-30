@@ -100,6 +100,7 @@ export function normaliseSession(value: unknown): Session {
         total: v.total,
         darts: v.darts,
         double: v.double,
+        ...(v.source !== undefined ? { source: v.source } : {}),
         ...(v.participantId !== undefined
           ? { participantId: v.participantId }
           : {}),

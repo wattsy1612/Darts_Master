@@ -62,6 +62,8 @@ Practice opponents follow the chosen match rules and generate individual darts w
 
 Saved players are local profiles, not registered accounts. Select a saved player before starting a game to link that result; guest matches are not automatically attached by matching names. Profile statistics use decided matches within the latest 100 finished entries retained in this browser.
 
+Local statistics use [versioned metric definitions](docs/METRICS.md). Match/profile records disclose recorded visits and darts, segment coverage, input origins and imported samples. Checkout attempts, target accuracy and physical hit positions are unavailable; local/practice/imported records are unverified.
+
 The current match, saved players and latest 100 finished matches stay in this browser’s IndexedDB database. Older local-storage saves migrate automatically while their original copies are preserved. Starting a new match replaces an unfinished game only after confirmation; finished results remain in history. Use Data & backups to download a full backup or review and import a backup or individual match export. Imports require explicit player links, skip duplicates and preserve a pre-import recovery copy. Undo is available until another change is saved. Import limits are 20 MB, 100 players and 100 archived results; oversized combinations are rejected without trimming existing data. Clearing browser data removes local results. There is no account or cloud sync yet. The bundled fonts retain their upstream SIL Open Font Licences; system fallbacks remain available. See [font sources](docs/FONTS.md).
 
 ## Local players, pairs and teams

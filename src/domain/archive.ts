@@ -1,3 +1,4 @@
+import { metricsVersion } from './metrics';
 import { replay, isTerminal } from './match';
 import type { Session } from './match';
 
@@ -50,6 +51,7 @@ export function exportMatch(session: Session): string {
       exportedAt: new Date().toISOString(),
       session,
       result: {
+        metricsVersion,
         players: match.setup.players,
         ...(session.version >= 3
           ? { status: match.status, concededBy: match.concededBy }

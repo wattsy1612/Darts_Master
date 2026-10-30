@@ -73,6 +73,7 @@ describe('saved match archive', () => {
     const result = JSON.parse(exportMatch(finished));
     expect(result.format).toBe('darts-master-match');
     expect(result.result).toEqual({
+      metricsVersion: 'x01-recorded-v1',
       players: ['Alice', 'Bob'],
       legs: [1, 0],
       winner: 'Alice',

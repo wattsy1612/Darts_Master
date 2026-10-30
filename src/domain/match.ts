@@ -1,3 +1,5 @@
+import { inputSources, visitStatistics } from './metrics';
+import type { InputSource, InputOrigin } from './metrics';
 import { getSides, rosterView } from './participants';
 import type { MatchSide, RosterSettings } from './participants';
 import { createBullOff, recordBull } from './bullOff';
@@ -23,8 +25,10 @@ export type Visit = {
   hits?: DartHit[];
   opens?: boolean;
   participantId?: string;
+  source?: InputSource;
 };
 export type RecordedVisit = Visit & {
+  origin: InputOrigin;
   player: number;
   sideId: string;
   participantId: string;
@@ -205,6 +209,22 @@ export function recordVisit(match: Match, visit: Visit): Match {
   const thrower = currentThrower(match);
   if (visit.participantId !== undefined && visit.participantId !== thrower.id)
     throw new Error('This visit belongs to a different thrower.');
+  const simulated = !!match.setup.bot && player === 1;
+  if (visit.source !== undefined) {
+    if (!inputSources.includes(visit.source))
+      throw new Error('Unknown visit input source.');
+    if ((visit.source === 'simulated') !== simulated)
+      throw new Error('The visit input source does not match the thrower.');
+    if (visit.source === 'manual-segments' && visit.hits === undefined)
+      throw new Error('Manual segment entry requires individual dart details.');
+    if (visit.source === 'manual-total' && visit.hits !== undefined)
+      throw new Error(
+        'Manual total entry cannot claim individual dart details.',
+      );
+  }
+  const origin: InputOrigin = simulated
+    ? 'simulated'
+    : (visit.source ?? 'legacy-unknown');
   const needsOpening = !match.opened[player];
   let opens = visit.opens ?? false;
   if (visit.opens !== undefined && typeof visit.opens !== 'boolean')
@@ -293,6 +313,7 @@ export function recordVisit(match: Match, visit: Visit): Match {
       ...match.visits,
       {
         ...visit,
+        origin,
         ...(needsOpening ? { opens } : {}),
         player,
         sideId: match.sides[player].id,
@@ -394,6 +415,13 @@ export function replay(session: Session): Match {
       ))
   )
     throw new Error('Participant rosters require saved-match version 5.');
+  if (
+    session.version < 5 &&
+    session.commands.some(
+      (c) => c?.type === 'visit' && c.visit?.source !== undefined,
+    )
+  )
+    throw new Error('Visit input sources require saved-match version 5.');
   if (session.version === 5 && !session.setup.sides)
     throw new Error('A v5 match requires a participant roster.');
   let match = createMatch(session.setup);
@@ -451,30 +479,12 @@ export function replay(session: Session): Match {
 }
 
 export function playerStats(match: Match, player: number) {
-  return visitStats(match.visits.filter((v) => v.player === player));
+  return visitStatistics(match.visits.filter((v) => v.player === player));
 }
 export function participantStats(match: Match, participantId: string) {
-  return visitStats(
+  return visitStatistics(
     match.visits.filter((v) => v.participantId === participantId),
   );
-}
-function visitStats(visits: RecordedVisit[]) {
-  const darts = visits.reduce((n, v) => n + v.darts, 0);
-  const scored = visits.reduce((n, v) => n + (v.bust ? 0 : v.total), 0);
-  return {
-    average: darts ? ((scored / darts) * 3).toFixed(1) : '—',
-    darts,
-    best: visits.reduce((n, v) => Math.max(n, v.bust ? 0 : v.total), 0),
-    tons: visits.filter((v) => !v.bust && v.total >= 100 && v.total < 140)
-      .length,
-    ton40s: visits.filter((v) => !v.bust && v.total >= 140 && v.total < 180)
-      .length,
-    maximums: visits.filter((v) => !v.bust && v.total === 180).length,
-    highestCheckout: visits.reduce(
-      (n, v) => Math.max(n, v.checkout ? v.total : 0),
-      0,
-    ),
-  };
 }
 
 type Segment = { label: string; value: number };

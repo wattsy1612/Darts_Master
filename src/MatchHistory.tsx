@@ -1,3 +1,5 @@
+import ScoreEvidence from './ScoreEvidence';
+import { dataCoverage, inputSourceLabels } from './domain/metrics';
 import { useState } from 'react';
 import BullOffPanel from './BullOffPanel';
 import { dartLabel } from './domain/darts';
@@ -108,6 +110,10 @@ export default function MatchHistory({
                   ` · Practice: ${difficulties[match.setup.bot].name}`}
               </p>
             </div>
+            <ScoreEvidence
+              coverage={dataCoverage(match.visits)}
+              importedMatches={session?.imported ? 1 : 0}
+            />
             {match.setup.setsToWin && (
               <p className="muted">
                 Total legs: {match.legs.join('–')} · Set {match.set} legs:{' '}
@@ -228,6 +234,7 @@ export default function MatchHistory({
                       <th>Score</th>
                       <th>Darts</th>
                       <th>Result</th>
+                      <th>Input</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -258,6 +265,7 @@ export default function MatchHistory({
                                 ? 'Not opened'
                                 : 'Scored'}
                         </td>
+                        <td>{inputSourceLabels[v.origin]}</td>
                       </tr>
                     ))}
                   </tbody>
