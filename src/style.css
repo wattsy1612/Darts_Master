@@ -2,14 +2,14 @@
 
 :root {
   font-family: 'DM Sans', sans-serif;
-  color: #202c25;
-  background: #f4f4ee;
+  color: var(--color-ink);
+  background: var(--color-page);
   font-synthesis: none;
   font-weight: 400;
   --ink: #15251c;
   --muted: #738076;
-  --green: #c3ed86;
-  --line: #dde1d7;
+  --green: var(--color-accent);
+  --line: var(--color-line);
 }
 * {
   box-sizing: border-box;

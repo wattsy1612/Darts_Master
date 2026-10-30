@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ActionButton from './ui/ActionButton';
 import { dartLabel, dartValue, evaluateDarts } from './domain/darts';
 import type { DartHit } from './domain/darts';
 import { checkoutRoute } from './domain/match';
@@ -35,12 +36,14 @@ export default function DartboardEntry({
   onRecord,
   error,
   waitingForOpponent = false,
+  playerName,
 }: {
   remaining: number;
   disabled: boolean;
   onRecord: (visit: Visit) => void;
   error: string;
   waitingForOpponent?: boolean;
+  playerName?: string;
 }) {
   const [hits, setHits] = useState<DartHit[]>([]);
   const [precision, setPrecision] = useState(false);
@@ -232,153 +235,166 @@ export default function DartboardEntry({
               : 'Single · double · treble · bull')}
         </div>
       </div>
-      <div className="dart-slots" aria-label="Darts this visit">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className={`dart-slot ${hits[i] ? 'filled' : ''}`}>
-            <small>DART {i + 1}</small>
-            <strong>{hits[i] ? dartLabel(hits[i]) : '—'}</strong>
-            <span>{hits[i] ? `${dartValue(hits[i])} pts` : 'Not thrown'}</span>
-          </div>
-        ))}
-      </div>
-      <div className="dart-tools">
-        <button
-          className="button secondary"
-          disabled={locked}
-          onClick={() => add({ number: 0, multiplier: 1 })}
-        >
-          Miss / bounce-out
-        </button>
-        <button
-          className="text-button"
-          disabled={disabled || !hits.length}
-          onClick={() => setHits(hits.slice(0, -1))}
-        >
-          ↶ Remove last dart
-        </button>
-      </div>
-      <button
-        className="precision-toggle text-button"
-        aria-expanded={precision}
-        onClick={() => setPrecision(!precision)}
-      >
-        {precision
-          ? 'Hide larger buttons ↑'
-          : 'Need larger targets? Use number buttons ↓'}
-      </button>
-      {precision && (
-        <div className="precision-entry">
-          <div
-            className="multiplier-tabs"
-            role="group"
-            aria-label="Score multiplier"
+      <div className="dartboard-controls">
+        <div className="dart-slots" aria-label="Darts this visit">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={`dart-slot ${hits[i] ? 'filled' : ''}`}>
+              <small>DART {i + 1}</small>
+              <strong>{hits[i] ? dartLabel(hits[i]) : '—'}</strong>
+              <span>
+                {hits[i] ? `${dartValue(hits[i])} pts` : 'Not thrown'}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="dart-tools">
+          <button
+            className="button secondary"
+            disabled={locked}
+            onClick={() => add({ number: 0, multiplier: 1 })}
           >
-            {([1, 2, 3] as const).map((n) => (
+            Miss / bounce-out
+          </button>
+          <button
+            className="text-button"
+            disabled={disabled || !hits.length}
+            onClick={() => setHits(hits.slice(0, -1))}
+          >
+            ↶ Remove last dart
+          </button>
+        </div>
+        <button
+          className="precision-toggle text-button"
+          aria-expanded={precision}
+          onClick={() => setPrecision(!precision)}
+        >
+          {precision
+            ? 'Hide larger buttons ↑'
+            : 'Need larger targets? Use number buttons ↓'}
+        </button>
+        {precision && (
+          <div className="precision-entry">
+            <div
+              className="multiplier-tabs"
+              role="group"
+              aria-label="Score multiplier"
+            >
+              {([1, 2, 3] as const).map((n) => (
+                <button
+                  key={n}
+                  aria-pressed={multiplier === n}
+                  disabled={disabled}
+                  onClick={() => setMultiplier(n)}
+                >
+                  {['', 'Single', 'Double', 'Treble'][n]}
+                </button>
+              ))}
+            </div>
+            <div className="number-targets">
+              {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  disabled={locked}
+                  onClick={() => add({ number: n, multiplier })}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <div className="bull-targets">
               <button
-                key={n}
-                aria-pressed={multiplier === n}
-                disabled={disabled}
-                onClick={() => setMultiplier(n)}
-              >
-                {['', 'Single', 'Double', 'Treble'][n]}
-              </button>
-            ))}
-          </div>
-          <div className="number-targets">
-            {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
-              <button
-                key={n}
                 disabled={locked}
-                onClick={() => add({ number: n, multiplier })}
+                onClick={() => add({ number: 25, multiplier: 1 })}
               >
-                {n}
+                Outer bull · 25
               </button>
-            ))}
+              <button
+                disabled={locked}
+                onClick={() => add({ number: 25, multiplier: 2 })}
+              >
+                Bull · 50
+              </button>
+            </div>
           </div>
-          <div className="bull-targets">
-            <button
-              disabled={locked}
-              onClick={() => add({ number: 25, multiplier: 1 })}
-            >
-              Outer bull · 25
-            </button>
-            <button
-              disabled={locked}
-              onClick={() => add({ number: 25, multiplier: 2 })}
-            >
-              Bull · 50
-            </button>
+        )}
+        <div
+          className="visit-confirmation"
+          aria-label={
+            playerName
+              ? `${playerName} visit confirmation`
+              : 'Visit confirmation'
+          }
+        >
+          <div className={`dart-preview ${result.status}`} aria-live="polite">
+            <span>
+              {disabled
+                ? waitingForOpponent
+                  ? 'OPPONENT TURN'
+                  : 'VISIT COMPLETE'
+                : result.status === 'checkout'
+                  ? 'GAME SHOT'
+                  : result.status === 'bust'
+                    ? 'BUST · SCORE RETURNS TO'
+                    : 'LEAVES'}
+            </span>
+            <strong>
+              {disabled
+                ? '—'
+                : result.status === 'checkout'
+                  ? '0'
+                  : result.remaining}
+            </strong>
+            <small>
+              {disabled
+                ? waitingForOpponent
+                  ? 'Their darts will appear in match history.'
+                  : 'Start the next leg or view your match summary.'
+                : result.status === 'bust'
+                  ? 'The whole visit scores zero.'
+                  : ended
+                    ? 'Confirm below to finish your visit.'
+                    : `${result.total} scored · ${3 - hits.length} ${3 - hits.length === 1 ? 'dart' : 'darts'} left`}
+            </small>
           </div>
-        </div>
-      )}
-      <div className={`dart-preview ${result.status}`} aria-live="polite">
-        <span>
-          {disabled
-            ? waitingForOpponent
-              ? 'OPPONENT TURN'
-              : 'VISIT COMPLETE'
-            : result.status === 'checkout'
-              ? 'GAME SHOT'
+          {hits.length > 0 && !disabled && !ended && hits.length < 3 && (
+            <div className="draft-checkout">
+              <span>
+                {route
+                  ? `Checkout with ${3 - hits.length} ${3 - hits.length === 1 ? 'dart' : 'darts'} left`
+                  : 'No finish with the darts left this visit'}
+              </span>
+              {route && <strong>{route.join(' → ')}</strong>}
+            </div>
+          )}
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          <ActionButton
+            className="submit-score"
+            disabled={disabled || (!ended && hits.length !== 3)}
+            onClick={() =>
+              onRecord({
+                total: result.total,
+                darts: result.darts,
+                double: result.double,
+                hits,
+              })
+            }
+          >
+            {result.status === 'checkout'
+              ? 'Confirm game shot'
               : result.status === 'bust'
-                ? 'BUST · SCORE RETURNS TO'
-                : 'LEAVES'}
-        </span>
-        <strong>
-          {disabled
-            ? '—'
-            : result.status === 'checkout'
-              ? '0'
-              : result.remaining}
-        </strong>
-        <small>
-          {disabled
-            ? waitingForOpponent
-              ? 'Their darts will appear in match history.'
-              : 'Start the next leg or view your match summary.'
-            : result.status === 'bust'
-              ? 'The whole visit scores zero.'
-              : ended
-                ? 'Confirm below to finish your visit.'
-                : `${result.total} scored · ${3 - hits.length} ${3 - hits.length === 1 ? 'dart' : 'darts'} left`}
-        </small>
-      </div>
-      {hits.length > 0 && !disabled && !ended && hits.length < 3 && (
-        <div className="draft-checkout">
-          <span>
-            {route
-              ? `Checkout with ${3 - hits.length} ${3 - hits.length === 1 ? 'dart' : 'darts'} left`
-              : 'No finish with the darts left this visit'}
-          </span>
-          {route && <strong>{route.join(' → ')}</strong>}
+                ? 'Record bust'
+                : `Record ${result.total} points`}
+            <span>↵</span>
+          </ActionButton>
         </div>
-      )}
-      {error && (
-        <p className="error" role="alert">
-          {error}
+        <p className="keyboard-hint">
+          Review your darts before recording. A visit stops on a bust or finish.
         </p>
-      )}
-      <button
-        className="button primary submit-score"
-        disabled={disabled || (!ended && hits.length !== 3)}
-        onClick={() =>
-          onRecord({
-            total: result.total,
-            darts: result.darts,
-            double: result.double,
-            hits,
-          })
-        }
-      >
-        {result.status === 'checkout'
-          ? 'Confirm game shot'
-          : result.status === 'bust'
-            ? 'Record bust'
-            : `Record ${result.total} points`}
-        <span>↵</span>
-      </button>
-      <p className="keyboard-hint">
-        Review your darts before recording. A visit stops on a bust or finish.
-      </p>
+      </div>
     </div>
   );
 }

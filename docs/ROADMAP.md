@@ -8,9 +8,11 @@ The application is a local prototype with a larger platform vision. “Darts Mas
 - [UI/UX and branding brief](DESIGN_BRIEF.md): journeys, screens, device layouts, interaction design, accessibility, design system, naming and brand assets.
 - [Feature backlog](FEATURE_BACKLOG.md): feature IDs, dependencies, release intent and acceptance evidence for implementation issues/PRs.
 
-## Available foundation — v0.5
+## Available foundation — v0.6
 
-Local X01 scoring with an interactive dartboard or keypad; practice opponents; saved matches and export; browser-local player profiles and linked records. These profiles are not registered accounts. There are no connected camera adapters, cloud accounts or online matches yet.
+Compact local X01 scoring with focus mode, page URLs and an interactive dartboard or keypad; practice opponents; saved matches and export; browser-local player profiles and linked records. These profiles are not registered accounts. There are no connected camera adapters, cloud accounts or online matches yet.
+
+See the [delivery ledger](DELIVERY_STATUS.md) for current implementation and incomplete acceptance gates.
 
 ## Delivery sequence
 

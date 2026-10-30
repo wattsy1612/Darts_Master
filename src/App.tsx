@@ -5,6 +5,9 @@ import { dartLabel } from './domain/darts';
 import { botVisit, difficulties } from './domain/bot';
 import PlayerProfiles, { PlayerField } from './PlayerProfiles';
 import { usePlayers } from './usePlayers';
+import { useRoute } from './useRoute';
+import ActionButton from './ui/ActionButton';
+import ComponentGallery from './ui/ComponentGallery';
 import {
   archiveKey,
   matchId,
@@ -101,9 +104,32 @@ export default function App() {
   const [double, setDouble] = useState(false);
   const [error, setError] = useState('');
   const [storageWarning, setStorageWarning] = useState(saved.warning);
-  const [tab, setTab] = useState<'score' | 'history' | 'players' | 'roadmap'>(
-    'score',
-  );
+  const [tab, setTab] = useRoute();
+  const [focusMode, setFocusMode] = useState(() => {
+    try {
+      return localStorage.getItem('darts-master.focus-mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const playing = !!session && !editing && tab === 'score';
+  useEffect(() => {
+    if (playing) window.scrollTo(0, 0);
+  }, [playing]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('darts-master.focus-mode', String(focusMode));
+    } catch {
+      /* Preference only. */
+    }
+  }, [focusMode]);
+  useEffect(() => {
+    const exit = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && playing && focusMode) setFocusMode(false);
+    };
+    window.addEventListener('keydown', exit);
+    return () => window.removeEventListener('keydown', exit);
+  }, [playing, focusMode]);
   const match = useMemo(() => (session ? replay(session) : null), [session]);
   const botTurn =
     !!match?.setup.bot && match.turn === 1 && match.legWinner === null;
@@ -323,7 +349,9 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell ${playing ? 'is-playing' : ''} ${playing && focusMode ? 'is-focused' : ''}`}
+    >
       <aside className="sidebar">
         <a
           href="#"
@@ -375,7 +403,7 @@ export default function App() {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.5</span>
+          Development build <span>v0.6</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -388,16 +416,48 @@ export default function App() {
         </header>
         <main>
           <div className="page-heading">
+            {playing && (
+              <details className="workspace-menu">
+                <summary aria-label="Match navigation">☰</summary>
+                <nav aria-label="Match pages">
+                  {(
+                    [
+                      ['players', 'Players'],
+                      ['history', 'Match history'],
+                      ['roadmap', 'What’s next'],
+                    ] as const
+                  ).map(([route, label]) => (
+                    <button
+                      key={route}
+                      onClick={(e) => {
+                        setTab(route);
+                        e.currentTarget
+                          .closest('details')
+                          ?.removeAttribute('open');
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </nav>
+              </details>
+            )}
             <div>
               <div className="eyebrow">STEP UP TO THE OCHE</div>
               <h1>
                 {tab === 'score'
-                  ? 'Let’s play darts.'
+                  ? playing
+                    ? match?.setup.bot
+                      ? 'Practice match'
+                      : 'Local match'
+                    : 'Let’s play darts.'
                   : tab === 'history'
                     ? 'Every visit counts.'
                     : tab === 'players'
                       ? 'Your players. Their game.'
-                      : 'Beyond the scoreboard.'}
+                      : tab === 'ui'
+                        ? 'Interface foundation.'
+                        : 'Beyond the scoreboard.'}
               </h1>
               <p>
                 {tab === 'score'
@@ -409,20 +469,32 @@ export default function App() {
                       : 'One home for your game, your team and your competition.'}
               </p>
             </div>
-            {match && !editing && (
-              <button
-                className="button secondary"
-                onClick={() => {
-                  setSetup(match.setup);
-                  setReplaceConfirmed(false);
-                  setTab('score');
-                  setEditing(true);
-                  setError('');
-                }}
-              >
-                + New match
-              </button>
-            )}
+            <div className="heading-actions">
+              {playing && (
+                <ActionButton
+                  variant="secondary"
+                  aria-pressed={focusMode}
+                  aria-label="Focus mode"
+                  onClick={() => setFocusMode(!focusMode)}
+                >
+                  {focusMode ? 'Exit focus' : 'Focus mode'}
+                </ActionButton>
+              )}
+              {match && !editing && (
+                <button
+                  className="button secondary"
+                  onClick={() => {
+                    setSetup(match.setup);
+                    setReplaceConfirmed(false);
+                    setTab('score');
+                    setEditing(true);
+                    setError('');
+                  }}
+                >
+                  + New match
+                </button>
+              )}
+            </div>
           </div>
           {storageWarning && (
             <p role="status" className="notice">
@@ -757,7 +829,10 @@ export default function App() {
                     className={`play-grid ${entryMode === 'board' ? 'dartboard-mode' : ''}`}
                   >
                     <div className="score-column">
-                      <section className="board" aria-label="Scoreboard">
+                      <section
+                        className={`board ${match.legWinner !== null ? 'completed' : ''}`}
+                        aria-label="Scoreboard"
+                      >
                         <div className="players">
                           {match.setup.players.map((name, index) => {
                             const stats = playerStats(match, index);
@@ -806,7 +881,9 @@ export default function App() {
                             );
                           })}
                         </div>
-                        <div className="board-bottom">
+                        <div
+                          className={`board-bottom ${match.legWinner === null && !route ? 'empty-guide' : ''}`}
+                        >
                           {match.legWinner !== null ? (
                             <>
                               <span className="eyebrow">
@@ -975,6 +1052,7 @@ export default function App() {
                         <DartboardEntry
                           key={`${session?.id}-${session?.commands.length}`}
                           remaining={match.scores[match.turn]}
+                          playerName={match.setup.players[match.turn]}
                           waitingForOpponent={botTurn}
                           disabled={entryBlocked}
                           error={error}
@@ -1138,6 +1216,7 @@ export default function App() {
               }}
             />
           )}
+          {import.meta.env.DEV && tab === 'ui' && <ComponentGallery />}
           {tab === 'roadmap' && (
             <section className="roadmap">
               <div className="roadmap-intro">

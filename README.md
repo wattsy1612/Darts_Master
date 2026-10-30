@@ -6,6 +6,8 @@ The start of a universal darts platform: manual scoring now; supported automatic
 
 See the [full implementation plan](docs/IMPLEMENTATION_PLAN.md), [UI/UX and brand brief](docs/DESIGN_BRIEF.md), [feature backlog](docs/FEATURE_BACKLOG.md) and [roadmap overview](docs/ROADMAP.md). These separate current v0.5 behaviour from the complete platform vision and define dependencies and release gates.
 
+Track current goal progress in the [delivery ledger](docs/DELIVERY_STATUS.md).
+
 ## Run the app
 
 Use **Ubuntu / WSL**, not Windows PowerShell, for project commands. Node 24 LTS is required; the exact development version is recorded in `.nvmrc`.
@@ -41,7 +43,9 @@ Open **http://localhost:5173** in a browser on the Dell. When working from anoth
 - Automatic archive of the latest 100 completed matches on this browser.
 - Match summaries with scoring bands, 180s and highest checkout, plus JSON export.
 - Protection against accidentally replacing an unfinished match.
-- Responsive layouts for desktop and phone screens.
+- Compact playing layouts with reachable record controls on reference laptop and phone screens.
+- Focus mode with Escape exit and remembered preference.
+- Page URLs with refresh and browser back/forward navigation.
 
 Board entry is the default for new installations; use the **Dartboard / Keypad** switch to choose and save your preferred input method. Board visits are recorded only after confirmation, so you can correct a misplaced tap first. Unrecorded draft darts are not saved across a refresh.
 
@@ -75,6 +79,10 @@ Installed development tools on the Dell:
 - GCC, G++ and Make for dependencies with native components.
 
 In VS Code, use **WSL: Open Folder in WSL** and choose `/mnt/c/Users/watts/Documents/ChatGPT/Darts Master`. Recommended editor extensions are recorded in `.vscode/extensions.json`. Keep secrets in ignored `.env` files; use placeholders in a committed `.env.example` if needed.
+
+## Interface development
+
+The provisional UI tokens are in `src/styles/tokens.css`, with compact workspace styles in `src/styles/workspace.css`. Shared action and feedback components are in `src/ui/`. The development-only component gallery is at `http://localhost:5173/#/design-system`; it is not a production destination. Full design, accessibility and physical-device acceptance remain tracked in the delivery ledger.
 
 ## Code layout
 
