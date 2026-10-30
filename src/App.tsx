@@ -1,3 +1,7 @@
+import { previewCorrection } from './domain/correction';
+import { backupText } from './data/backup';
+import type { CorrectionReview } from './VisitCorrection';
+import type { CorrectionInput, CorrectionPolicy } from './domain/correction';
 import { defaultBotSettings } from './domain/botSettings';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import MatchHistory from './MatchHistory';
@@ -90,6 +94,35 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
   const [archiveError, setArchiveError] = useState(savedArchive.warning);
   const [rematchStarter, setRematchStarter] = useState<number | null>(null);
   const [redoGroups, setRedoGroups] = useState<Command[][]>([]);
+  // A development hot refresh can retain an older repository instance.
+  // Keep play usable until reload, rather than calling newly added methods on it.
+  const correctionsSupported =
+    typeof repository.correctionRecovery === 'function' &&
+    typeof repository.correctMatch === 'function' &&
+    typeof repository.undoCorrection === 'function' &&
+    typeof repository.correctionBackup === 'function';
+  const [correctionRecovery, setCorrectionRecovery] = useState<{
+    has: boolean;
+    undo: boolean;
+  }>({ has: false, undo: false });
+  useEffect(() => {
+    if (!correctionsSupported) return;
+    let active = true;
+    repository
+      .correctionRecovery()
+      .then((copy) => {
+        if (active)
+          setCorrectionRecovery({
+            has: !!copy,
+            undo:
+              !!copy && copy.appliedRevision === repository.document.revision,
+          });
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [saveState, correctionsSupported]);
   const [botPaused, setBotPaused] = useState(() => {
     try {
       const control = JSON.parse(
@@ -240,6 +273,88 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     }
   }, [session?.id, session?.setup.bot, botPaused]);
 
+  async function applyCorrection(
+    review: CorrectionReview,
+    input: CorrectionInput,
+    policy: CorrectionPolicy,
+    replaceCurrent: boolean,
+  ) {
+    if (saveState !== 'saved')
+      throw new Error(
+        'Changes are not confirmed as saved. Export any unsaved game, then reload and review the correction again.',
+      );
+    const affectsCurrent =
+      session?.id === review.session.id ||
+      !isTerminal(
+        previewCorrection(review.session, review.commandIndex, input, policy)
+          .after,
+      );
+    if (
+      affectsCurrent &&
+      (hasDraft(visitDraft.value) || visitDraft.recovery) &&
+      !window.confirm(
+        'Applying this correction discards this turn’s unsubmitted draft. Continue?',
+      )
+    )
+      return false;
+    const result = await repository.correctMatch(
+      review.session,
+      review.commandIndex,
+      input,
+      policy,
+      review.revision,
+      replaceCurrent,
+    );
+    if (affectsCurrent) {
+      visitDraft.discard();
+      setSession(result.data.current);
+      setRedoGroups([]);
+      setEditing(false);
+    }
+    setArchives(result.data.archive);
+    setAnnouncement('Reviewed correction saved with a recovery copy.');
+    setStorageWarning('');
+    return true;
+  }
+  async function undoReviewedCorrection() {
+    const previous = await repository.correctionBackup();
+    const affectsCurrent =
+      JSON.stringify(previous?.current) !== JSON.stringify(session);
+    if (
+      affectsCurrent &&
+      (hasDraft(visitDraft.value) || visitDraft.recovery) &&
+      !window.confirm(
+        'Undoing the correction discards this turn’s unsubmitted draft. Continue?',
+      )
+    )
+      return;
+    const result = await repository.undoCorrection();
+    if (affectsCurrent) {
+      visitDraft.discard();
+      setSession(result.data.current);
+      setRedoGroups([]);
+      setEditing(!result.data.current);
+    }
+    setArchives(result.data.archive);
+    setBotPaused(true);
+    setAnnouncement(
+      'Previous data restored from the correction recovery copy.',
+    );
+  }
+  async function downloadCorrectionBackup() {
+    const data = await repository.correctionBackup();
+    if (!data) throw new Error('No correction recovery backup is available.');
+    const url = URL.createObjectURL(
+      new Blob([backupText(data, ['Pre-correction recovery copy.'])], {
+        type: 'application/json',
+      }),
+    );
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'darts-before-correction.json';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
   function append(command: Command) {
     if (!session) return;
     if (session.version === 5 && match) {
@@ -561,7 +676,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.14</span>
+          Development build <span>v0.15</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -1877,7 +1992,25 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
               )
             ))}
           {tab === 'history' && (
-            <MatchHistory current={session} archives={archives} />
+            <MatchHistory
+              current={session}
+              archives={archives}
+              correction={
+                correctionsSupported
+                  ? {
+                      revision: repository.document.revision,
+                      enabled:
+                        repository.mode === 'database' && saveState === 'saved',
+                      canUndo: correctionRecovery.undo,
+                      hasRecovery: correctionRecovery.has,
+                      onBegin: () => setBotPaused(true),
+                      onApply: applyCorrection,
+                      onUndo: undoReviewedCorrection,
+                      onDownload: downloadCorrectionBackup,
+                    }
+                  : undefined
+              }
+            />
           )}
           {tab === 'players' && (
             <PlayerProfiles

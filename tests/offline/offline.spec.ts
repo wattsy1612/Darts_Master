@@ -259,3 +259,48 @@ test('a failed first installation does not advertise offline readiness', async (
     0,
   );
 });
+
+test('reviewed corrections and their recovery copy survive an offline reload', async ({
+  page,
+  context,
+}) => {
+  await page.goto('/');
+  await ready(page);
+  await page.getByRole('button', { name: 'Start match' }).click();
+  await page.getByRole('button', { name: 'Keypad', exact: false }).click();
+  for (const total of [60, 60, 60]) {
+    await page.getByLabel('Visit total').fill(String(total));
+    await page.getByRole('button', { name: 'Record score' }).click();
+  }
+  await expect
+    .poll(
+      async () => (await readWorkspace(page))?.data.current?.commands.length,
+    )
+    .toBe(3);
+  const original = (await readWorkspace(page))!.data.current!;
+  await context.setOffline(true);
+  await page
+    .getByRole('button', { name: 'Match history', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Correct visit 1', exact: true })
+    .click();
+  await page.getByLabel('Corrected visit total').fill('100');
+  await page
+    .getByRole('button', { name: 'Preview correction', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Apply reviewed correction', exact: true })
+    .click();
+  await expect(
+    page.getByRole('button', { name: 'Undo last correction' }),
+  ).toBeEnabled();
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(
+    page.getByText('Offline · local play', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Undo last correction' }).click();
+  await expect
+    .poll(async () => (await readWorkspace(page))?.data.current)
+    .toEqual(original);
+});

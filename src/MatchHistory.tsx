@@ -1,3 +1,6 @@
+import VisitCorrection from './VisitCorrection';
+import type { CorrectionReview } from './VisitCorrection';
+import type { CorrectionInput, CorrectionPolicy } from './domain/correction';
 import ScoreEvidence from './ScoreEvidence';
 import { dataCoverage, inputSourceLabels } from './domain/metrics';
 import { useState } from 'react';
@@ -20,15 +23,35 @@ import type { ArchivedMatch } from './domain/archive';
 export default function MatchHistory({
   current,
   archives,
+  correction,
 }: {
   current: Session | null;
   archives: ArchivedMatch[];
+  correction?: {
+    revision: number;
+    enabled: boolean;
+    canUndo: boolean;
+    hasRecovery: boolean;
+    onBegin: () => void;
+    onApply: (
+      review: CorrectionReview,
+      input: CorrectionInput,
+      policy: CorrectionPolicy,
+      replaceCurrent: boolean,
+    ) => Promise<boolean>;
+    onUndo: () => Promise<void>;
+    onDownload: () => Promise<void>;
+  };
 }) {
   const [selected, setSelected] = useState('current');
+  const [review, setReview] = useState<CorrectionReview | null>(null);
+  const [recoveryError, setRecoveryError] = useState('');
   const session =
     selected === 'current'
       ? current
       : (archives.find((a) => a.session.id === selected)?.session ?? current);
+  const commandIndices =
+    session?.commands.flatMap((c, i) => (c.type === 'visit' ? [i] : [])) ?? [];
   const match = session ? replay(session) : null;
   function download() {
     if (!session) return;
@@ -60,6 +83,7 @@ export default function MatchHistory({
         <label className="history-select">
           Choose a match
           <select
+            disabled={!!review}
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
           >
@@ -73,6 +97,60 @@ export default function MatchHistory({
             ))}
           </select>
         </label>
+        {correction?.hasRecovery && (
+          <div className="correction-recovery">
+            <button
+              className="button secondary"
+              disabled={!correction.enabled || !correction.canUndo || !!review}
+              onClick={async () => {
+                try {
+                  await correction.onUndo();
+                  setRecoveryError('');
+                } catch (e) {
+                  setRecoveryError(
+                    e instanceof Error ? e.message : 'Recovery failed.',
+                  );
+                }
+              }}
+            >
+              Undo last correction
+            </button>
+            <button
+              className="text-button"
+              onClick={async () => {
+                try {
+                  await correction.onDownload();
+                  setRecoveryError('');
+                } catch (e) {
+                  setRecoveryError(
+                    e instanceof Error ? e.message : 'Download failed.',
+                  );
+                }
+              }}
+            >
+              Download pre-correction backup
+            </button>
+            {!correction.canUndo && (
+              <p>
+                Data changed after the last correction. Its backup is still
+                available; direct undo is disabled.
+              </p>
+            )}
+          </div>
+        )}
+        {recoveryError && (
+          <p role="alert" className="error">
+            {recoveryError}
+          </p>
+        )}
+        {review && correction && (
+          <VisitCorrection
+            review={review}
+            currentId={current?.id}
+            onApply={correction.onApply}
+            onClose={() => setReview(null)}
+          />
+        )}
         {match ? (
           <>
             {session?.imported && (
@@ -245,6 +323,7 @@ export default function MatchHistory({
                       <th>Darts</th>
                       <th>Result</th>
                       <th>Input</th>
+                      {correction && <th>Correction</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -276,6 +355,34 @@ export default function MatchHistory({
                                 : 'Scored'}
                         </td>
                         <td>{inputSourceLabels[v.origin]}</td>
+                        {correction && (
+                          <td>
+                            {match.setup.bot && v.player === 1 ? (
+                              <small>Simulated</small>
+                            ) : (
+                              <button
+                                type="button"
+                                className="text-button"
+                                aria-label={`Correct visit ${i + 1}`}
+                                disabled={
+                                  !correction.enabled ||
+                                  !!review ||
+                                  !session?.id
+                                }
+                                onClick={() => {
+                                  correction.onBegin();
+                                  setReview({
+                                    session: structuredClone(session!),
+                                    commandIndex: commandIndices[i],
+                                    revision: correction.revision,
+                                  });
+                                }}
+                              >
+                                Correct
+                              </button>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

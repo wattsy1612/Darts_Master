@@ -1,3 +1,6 @@
+import { previewCorrection } from '../domain/correction';
+import type { CorrectionInput, CorrectionPolicy } from '../domain/correction';
+import { isTerminal, replay } from '../domain/match';
 import { updateArchive } from '../domain/archive';
 import { addPlayer, renamePlayer } from '../domain/players';
 import type { Session } from '../domain/match';
@@ -20,6 +23,7 @@ import type {
 } from './workspace';
 
 export type SaveState = 'saved' | 'saving' | 'unsaved';
+export const correctionRecoveryKey = 'before-correction';
 type Mode = 'database' | 'legacy-recovery' | 'unreadable' | 'memory';
 class RejectedChange extends Error {}
 class ExternalConflict extends Error {}
@@ -52,7 +56,7 @@ export class LocalRepository {
   }
   private write(
     transform: (data: WorkspaceData) => WorkspaceData,
-    backup = false,
+    backup: boolean | 'correction' = false,
     kind: 'match' | 'other' = 'other',
   ): Promise<WorkspaceDocument> {
     this.pending++;
@@ -105,7 +109,12 @@ export class LocalRepository {
                   return;
                 }
                 output = { version: 2, revision: latest.revision + 1, data };
-                if (backup)
+                if (backup === 'correction')
+                  store.put(
+                    { previous: latest, appliedRevision: output.revision },
+                    correctionRecoveryKey,
+                  );
+                else if (backup)
                   store.put(
                     { previous: latest, importedRevision: output.revision },
                     recoveryKey,
@@ -178,6 +187,86 @@ export class LocalRepository {
       false,
       'match',
     );
+  }
+  async correctMatch(
+    expected: Session,
+    commandIndex: number,
+    input: CorrectionInput,
+    policy: CorrectionPolicy,
+    expectedRevision: number,
+    replaceCurrent = false,
+  ) {
+    const checkedExpected = normaliseSession(expected);
+    const preview = previewCorrection(
+      checkedExpected,
+      commandIndex,
+      input,
+      policy,
+    );
+    const corrected = normaliseSession(preview.session);
+    if (JSON.stringify(corrected) === JSON.stringify(checkedExpected))
+      throw new Error('The correction does not change this recorded match.');
+    return this.write((data) => {
+      if (this.document.revision !== expectedRevision)
+        throw new Error(
+          'Saved data changed after this review. Close the editor and review the visit again.',
+        );
+      const target =
+        data.current?.id === expected.id
+          ? data.current
+          : data.archive.find((e) => e.session.id === expected.id)?.session;
+      if (
+        !target ||
+        JSON.stringify(normaliseSession(target)) !==
+          JSON.stringify(checkedExpected)
+      )
+        throw new Error(
+          'The match changed after this review. Review the visit again.',
+        );
+      const becomesCurrent =
+        data.current?.id === expected.id || !isTerminal(replay(corrected));
+      if (
+        becomesCurrent &&
+        data.current &&
+        data.current.id !== expected.id &&
+        !replaceCurrent
+      )
+        throw new Error(
+          'Confirm replacing the current game before reopening this archived match.',
+        );
+      return {
+        ...data,
+        current: becomesCurrent ? corrected : data.current,
+        archive: updateArchive(data.archive, corrected),
+      };
+    }, 'correction');
+  }
+  async correctionRecovery(): Promise<{
+    previous: unknown;
+    appliedRevision: number;
+  } | null> {
+    if (!this.db) return null;
+    return new Promise((resolve, reject) => {
+      const tx = this.db!.transaction(objectStoreName, 'readonly');
+      const r = tx.objectStore(objectStoreName).get(correctionRecoveryKey);
+      r.onsuccess = () => resolve(r.result ?? null);
+      r.onerror = () => reject(r.error);
+    });
+  }
+  async undoCorrection() {
+    const recovery = await this.correctionRecovery();
+    if (!recovery) throw new Error('There is no correction recovery copy.');
+    return this.write(() => {
+      if (this.document.revision !== recovery.appliedRevision)
+        throw new Error(
+          'Data changed after the correction. Undo is no longer available; export the recovery copy instead.',
+        );
+      return validateDocument(recovery.previous).data;
+    });
+  }
+  async correctionBackup(): Promise<WorkspaceData | null> {
+    const recovery = await this.correctionRecovery();
+    return recovery ? validateDocument(recovery.previous).data : null;
   }
   async addPlayer(name: string) {
     const result = await this.write((data) => ({
