@@ -27,6 +27,7 @@ Open **http://localhost:5173** in a browser on the Dell. When working from anoth
 - Two-player X01 with 301/501/701/1001 presets and custom whole-number starts from 101 to 1001.
 - Straight/double opening and finishing rules, with shared board/keypad validation.
 - Legs or sets, separate set/leg totals, and selectable leg/set starter rotation.
+- Saved local bull-off workflow with rethrows, human closer-dart decisions and correction.
 - Saved browser-local player profiles, reusable at setup and renameable without losing result links.
 - Player records with wins/losses, leg totals, weighted scoring averages, 180s, highest checkout and recent results.
 - Separate player-versus-player and practice statistics, based on decided matches linked to a profile.
@@ -54,13 +55,19 @@ Open **http://localhost:5173** in a browser on the Dell. When working from anoth
 
 Board entry is the default for new installations; use the **Dartboard / Keypad** switch to choose and save your preferred input method. Board visits are recorded only after confirmation, so you can correct a misplaced tap first. Unsubmitted board darts and keypad details are saved separately for this tab. On refresh, a matching draft is offered for explicit restore or discard; it never records a visit by itself. Drafts expire after seven days and are excluded from full match backups. Closing a tab may remove its draft link, so record a visit before closing it.
 
-Double-in keypad visits require an explicit opening declaration and include only points scored from the opening double onwards; count every dart thrown. Board entry calculates this automatically. A bust cancels the entire visit, including an opening double. Straight out allows one remaining and a finish on any segment. Sets use first-to targets without win-by-two/tie-break rules. Older v1 games retain their original straight-in/double-out legs rules; v2 rule sessions remain readable, and new games use v3 session data with replayable lifecycle commands. Older app versions reject unsupported session versions.
+Double-in keypad visits require an explicit opening declaration and include only points scored from the opening double onwards; count every dart thrown. Board entry calculates this automatically. A bust cancels the entire visit, including an opening double. Straight out allows one remaining and a finish on any segment. Sets use first-to targets without win-by-two/tie-break rules. Older v1 games retain their original straight-in/double-out legs rules; v2 rule and v3 lifecycle sessions remain readable, and new games use v4 session data with optional bull-off events. Older app versions reject unsupported session versions.
 
 Practice opponents follow the chosen match rules and generate individual darts with different hit/miss probabilities; difficulty names are not guaranteed averages or ratings. They follow the same opening, bust and finishing rules as human players. Opponent throws pause while viewing history or editing setup. Saved match positions produce repeatable opponent throws, so refresh and correction do not reroll a score.
 
 Saved players are local profiles, not registered accounts. Select a saved player before starting a game to link that result; guest matches are not automatically attached by matching names. Profile statistics use decided matches within the latest 100 finished entries retained in this browser.
 
 The current match, saved players and latest 100 finished matches stay in this browser’s IndexedDB database. Older local-storage saves migrate automatically while their original copies are preserved. Starting a new match replaces an unfinished game only after confirmation; finished results remain in history. Use Data & backups to download a full backup or review and import a backup or individual match export. Imports require explicit player links, skip duplicates and preserve a pre-import recovery copy. Undo is available until another change is saved. Import limits are 20 MB, 100 players and 100 archived results; oversized combinations are rejected without trimming existing data. Clearing browser data removes local results. There is no account or cloud sync yet. External fonts use system fallbacks if unavailable.
+
+## Throwing for the bull
+
+For two local players, choose **Throw for the bull** at setup and select who throws for it first. The app records each valid dart in order, reverses the order after matching bulls or a rethrow, and asks for a human closer-dart decision when both darts are outside the bull. Bounce-outs are rethrown until a dart stays in the scoring surface. If a dart is dislodged, both players rethrow in reverse order.
+
+Bull-off events save with the match and survive refresh or full-match pause. Match scoring is blocked until the bull-off is decided; its winner becomes the initial starter for the configured leg/set rotation. These darts never count toward scoring averages. History and backups retain the bull-off record. A rematch with an explicitly chosen starter starts fresh without reusing the old bull-off; use New match to throw for the bull again. Practice uses a chosen starter because there is no physical simulated-opponent dart to measure.
 
 ## Match controls and outcomes
 

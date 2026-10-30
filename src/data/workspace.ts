@@ -37,7 +37,7 @@ export function normaliseSession(value: unknown): Session {
   const input = value as Session;
   if (
     !input ||
-    ![1, 2, 3].includes(input.version) ||
+    ![1, 2, 3, 4].includes(input.version) ||
     !Array.isArray(input.commands) ||
     input.commands.length > 10000
   )
@@ -57,10 +57,17 @@ export function normaliseSession(value: unknown): Session {
   if (settings.setsToWin !== undefined) setup.setsToWin = settings.setsToWin;
   if (settings.starterPolicy !== undefined)
     setup.starterPolicy = settings.starterPolicy;
+  if (settings.startMethod !== undefined)
+    setup.startMethod = settings.startMethod;
   const checked = createMatch(setup).setup;
   const commands: Command[] = input.commands.map((command) => {
+    if (command?.type === 'bull-throw')
+      return { type: 'bull-throw', player: command.player, hit: command.hit };
+    if (command?.type === 'bull-closest')
+      return { type: 'bull-closest', winner: command.winner };
+    if (command?.type === 'bull-rethrow') return { type: 'bull-rethrow' };
+    if (command?.type === 'next-leg') return { type: 'next-leg' };
     if (
-      command?.type === 'next-leg' ||
       command?.type === 'pause' ||
       command?.type === 'resume' ||
       command?.type === 'abandon'

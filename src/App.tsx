@@ -9,6 +9,7 @@ import { useRoute } from './useRoute';
 import ActionButton from './ui/ActionButton';
 import ComponentGallery from './ui/ComponentGallery';
 import DataManager from './DataManager';
+import BullOffPanel from './BullOffPanel';
 import { useVisitDraft } from './useVisitDraft';
 import { OfflineIndicator } from './OfflineSupport';
 import { turnIdentity } from './data/draft';
@@ -23,6 +24,7 @@ import {
   checkoutRoute,
   formatSummary,
   isTerminal,
+  bullPending,
   rematch,
   createMatch,
   playerStats,
@@ -110,8 +112,10 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     }
   });
   const match = useMemo(() => (session ? replay(session) : null), [session]);
+  const bullInProgress = !!match && bullPending(match);
   const botTurn =
     !!match?.setup.bot &&
+    !bullInProgress &&
     match.status === 'active' &&
     match.turn === 1 &&
     match.legWinner === null;
@@ -122,6 +126,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
       !!repository.document.data.current &&
       turnIdentity(session) === turnIdentity(repository.document.data.current),
     !!match &&
+      !bullInProgress &&
       match.status === 'active' &&
       match.legWinner === null &&
       !botTurn &&
@@ -149,7 +154,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
   const playing = !!session && !editing && tab === 'score';
   useEffect(() => {
     if (playing) window.scrollTo(0, 0);
-  }, [playing]);
+  }, [playing, bullInProgress]);
   useEffect(() => {
     try {
       localStorage.setItem('darts-master.focus-mode', String(focusMode));
@@ -167,12 +172,13 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
   const entryBlocked =
     !match ||
     match.status !== 'active' ||
+    bullInProgress ||
     match.legWinner !== null ||
     botTurn ||
     visitDraft.loading ||
     !!visitDraft.recovery;
   const route =
-    match?.status === 'active'
+    match?.status === 'active' && !bullInProgress
       ? checkoutRoute(
           match.scores[match.turn],
           3,
@@ -186,7 +192,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     !!match &&
     (isTerminal(match)
       ? !resultSaved
-      : match.visits.length > 0 || match.status === 'paused');
+      : (session?.commands.length ?? 0) > 0 || match.status === 'paused');
   const finishing =
     !!match && score !== '' && Number(score) === match.scores[match.turn];
 
@@ -236,26 +242,33 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
       version:
         command.type === 'visit' || command.type === 'next-leg'
           ? session.version
-          : 3,
+          : (Math.max(
+              session.version,
+              command.type.startsWith('bull-') ? 4 : 3,
+            ) as Session['version']),
       commands: [...session.commands, command],
     };
     try {
       const result = replay(next);
       const last = result.visits.at(-1);
       setAnnouncement(
-        command.type === 'pause'
-          ? 'Match paused.'
-          : command.type === 'resume'
-            ? 'Match resumed.'
-            : command.type === 'abandon'
-              ? 'Match abandoned. No winner awarded.'
-              : command.type === 'concede'
-                ? `${result.setup.players[command.player]} conceded the match.`
-                : command.type === 'next-leg'
-                  ? `${result.setup.setsToWin ? `Set ${result.set}. ` : ''}Leg ${result.leg}. ${result.setup.players[result.turn]} throws first.`
-                  : last
-                    ? `${result.setup.players[last.player]}: ${last.bust ? 'bust. Score unchanged.' : last.checkout ? `${last.total}. Game shot!` : `${last.total} scored. ${result.scores[last.player]} remaining.`}`
-                    : '',
+        command.type === 'bull-throw'
+          ? `${result.setup.players[command.player]} bull-off dart recorded.`
+          : command.type === 'bull-closest' || command.type === 'bull-rethrow'
+            ? 'Bull-off decision recorded.'
+            : command.type === 'pause'
+              ? 'Match paused.'
+              : command.type === 'resume'
+                ? 'Match resumed.'
+                : command.type === 'abandon'
+                  ? 'Match abandoned. No winner awarded.'
+                  : command.type === 'concede'
+                    ? `${result.setup.players[command.player]} conceded the match.`
+                    : command.type === 'next-leg'
+                      ? `${result.setup.setsToWin ? `Set ${result.set}. ` : ''}Leg ${result.leg}. ${result.setup.players[result.turn]} throws first.`
+                      : last
+                        ? `${result.setup.players[last.player]}: ${last.bust ? 'bust. Score unchanged.' : last.checkout ? `${last.total}. Game shot!` : `${last.total} scored. ${result.scores[last.player]} remaining.`}`
+                        : '',
       );
       setRedoGroups([]);
       setSession(next);
@@ -435,7 +448,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
       }) as [string, string];
       const checked = createMatch({ ...setup, players: linkedNames });
       setSession({
-        version: 3,
+        version: 4,
         id: matchId(),
         setup: checked.setup,
         commands: [],
@@ -511,7 +524,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.10</span>
+          Development build <span>v0.11</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -994,7 +1007,32 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                       </label>
                     )}
                     <label>
-                      Throws first
+                      Choose the starter
+                      <select
+                        value={setup.startMethod ?? 'manual'}
+                        onChange={(e) =>
+                          setSetup({
+                            ...setup,
+                            startMethod: e.target.value as Setup['startMethod'],
+                          })
+                        }
+                      >
+                        <option value="manual">Choose who starts</option>
+                        <option value="bull-off" disabled={!!setup.bot}>
+                          Throw for the bull (two local players)
+                        </option>
+                      </select>
+                    </label>
+                    {setup.bot && (
+                      <p className="muted">
+                        Practice uses a chosen starter. Bull-off requires two
+                        physical players.
+                      </p>
+                    )}
+                    <label>
+                      {setup.startMethod === 'bull-off'
+                        ? 'Throws for the bull first'
+                        : 'Throws first'}
                       <select
                         value={setup.starter ?? 0}
                         onChange={(e) =>
@@ -1170,6 +1208,31 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                       </>
                     )}
                   </section>
+                  {match.bullOff &&
+                    (match.bullOff.winner === null ? (
+                      <BullOffPanel
+                        state={match.bullOff}
+                        players={match.setup.players}
+                        enabled={match.status === 'active'}
+                        onCommand={append}
+                        onUndo={undo}
+                        canUndo={
+                          session?.commands.at(-1)?.type.startsWith('bull-') ??
+                          false
+                        }
+                      />
+                    ) : (
+                      <details className="bull-result">
+                        <summary>
+                          Bull-off: {match.setup.players[match.bullOff.winner]}{' '}
+                          starts
+                        </summary>
+                        <BullOffPanel
+                          state={match.bullOff}
+                          players={match.setup.players}
+                        />
+                      </details>
+                    ))}
                   <div className="match-meta">
                     <div>
                       <span className="live-label">
@@ -1177,9 +1240,11 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                           ? '● MATCH FINISHED'
                           : match.status === 'paused'
                             ? '● PAUSED'
-                            : match.setup.bot
-                              ? '● PRACTICE MATCH'
-                              : '● LIVE MATCH'}
+                            : bullInProgress
+                              ? '● BULL-OFF'
+                              : match.setup.bot
+                                ? '● PRACTICE MATCH'
+                                : '● LIVE MATCH'}
                       </span>
                       <span>
                         {match.setup.start} · {ruleSummary(match.setup)} ·{' '}
@@ -1192,7 +1257,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                     </strong>
                   </div>
                   <div
-                    className={`play-grid ${entryMode === 'board' ? 'dartboard-mode' : ''} ${match.status !== 'active' ? 'is-stopped' : ''}`}
+                    className={`play-grid ${entryMode === 'board' ? 'dartboard-mode' : ''} ${match.status !== 'active' || bullInProgress ? 'is-stopped' : ''}`}
                   >
                     <div className="score-column">
                       <section
@@ -1204,6 +1269,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                             const stats = playerStats(match, index);
                             const active =
                               match.status === 'active' &&
+                              !bullInProgress &&
                               match.turn === index &&
                               match.legWinner === null;
                             return (
@@ -1268,10 +1334,12 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                           })}
                         </div>
                         <div
-                          className={`board-bottom ${match.status === 'active' && match.legWinner === null && !route ? 'empty-guide' : ''}`}
+                          className={`board-bottom ${match.status === 'active' && !bullInProgress && match.legWinner === null && !route ? 'empty-guide' : ''}`}
                         >
-                          {match.status === 'conceded' ||
-                          match.status === 'abandoned' ? (
+                          {bullInProgress && match.status === 'active' ? (
+                            <h2>Finish the bull-off to begin scoring</h2>
+                          ) : match.status === 'conceded' ||
+                            match.status === 'abandoned' ? (
                             <>
                               <span className="eyebrow">
                                 {match.status === 'conceded'
@@ -1432,7 +1500,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                     </div>
                     <section
                       className="entry-panel panel"
-                      hidden={match.status !== 'active'}
+                      hidden={match.status !== 'active' || bullInProgress}
                       aria-label="Score entry"
                     >
                       {visitDraft.loading && (

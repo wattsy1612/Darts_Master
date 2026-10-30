@@ -51,7 +51,7 @@ export function exportMatch(session: Session): string {
       session,
       result: {
         players: match.setup.players,
-        ...(session.version === 3
+        ...(session.version >= 3
           ? { status: match.status, concededBy: match.concededBy }
           : {}),
         legs: match.legs,

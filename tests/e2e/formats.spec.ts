@@ -44,7 +44,7 @@ test('double-in board draft ignores earlier darts and resumes with the chosen ru
     )
     .toBe(3);
   const saved = (await readWorkspace(page))!.data.current!;
-  expect(saved.version).toBe(3);
+  expect(saved.version).toBe(4);
   expect(saved.setup.inRule).toBe('double');
   expect(saved.commands[0]).toMatchObject({
     visit: { total: 100, opens: true },
@@ -172,7 +172,7 @@ test('sets advance with the selected starter policy, survive refresh and correct
   const exported = JSON.parse(
     await readFile((await (await download).path())!, 'utf8'),
   );
-  expect(exported.session.version).toBe(3);
+  expect(exported.session.version).toBe(4);
   expect(exported.result.sets).toEqual([2, 0]);
   await page.getByRole('button', { name: 'Data & backups' }).click();
   await page.getByLabel('Choose backup file').setInputFiles({

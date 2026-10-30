@@ -2,9 +2,9 @@
 
 The active goal covers the complete [implementation plan](IMPLEMENTATION_PLAN.md), [design brief](DESIGN_BRIEF.md) and all 83 items in the [feature backlog](FEATURE_BACKLOG.md). Status is evidence-based: an existing prototype feature or a partial implementation is not a completed public-release workstream.
 
-## Current increment — v0.10
+## Current increment — v0.11
 
-Local match lifecycle is now explicit: persistent pause/resume, concession without invented legs, abandonment without a winner, and a fresh rematch after the previous result saves. Actions replay through correction, archives and backup/import; v1/v2 sessions remain readable and lifecycle sessions use v3. See [lifecycle evidence](evidence/LIFECYCLE_2026-10-30.md). Real-device usability and future online authority remain open. Previous [rules](evidence/RULES_2026-10-30.md), [draft/offline](evidence/OFFLINE_2026-10-30.md), [data reliability](evidence/DATA_2026-10-30.md) and [workspace](evidence/WORKSPACE_2026-10-30.md) increments remain in place.
+Local bull-off now records throws and decisions as saved events: matching bulls and dislodged darts rethrow in reverse order, outside-bull darts need human comparison, and the winner owns the initial match starter. Scoring/drafts stay blocked until the decision; bull-off darts never inflate match statistics. v1–v3 sessions remain readable and new sessions use v4. See [bull-off evidence](evidence/BULL_OFF_2026-10-30.md). Practice still uses a chosen starter; physical-device and broader accessibility validation remain open. The full platform goal remains active.
 
 ## Product decisions and external evidence
 
@@ -33,7 +33,7 @@ Local match lifecycle is now explicit: persistent pause/resume, concession witho
 | BR-04 | Selected identity and UI token alignment            | Not started         | Baseline: Planned / before broad screen rollout. Next gate: Owner/user review of concrete screens and adopted tokens                                               |
 | BR-05 | Logo/icon/asset/licence package                     | Not started         | Baseline: Planned / public v1. Next gate: Source assets, variants, usage guide and rights record                                                                   |
 | BR-06 | Public app/landing/email/help consistency           | Not started         | Baseline: Planned / public v1. Next gate: No placeholder name/assets or unsupported capability claims                                                              |
-| SC-01 | X01 rules/sets configuration                        | Existing / partial  | Start/in/out/set/starter fixtures implemented with v1 compatibility; bull-off, broader rule UX and match-policy validation remain                                  |
+| SC-01 | X01 rules/sets configuration                        | Implemented / local | Configurable rules, sets, starter rotation and saved local bull-off fixtures pass; physical-device/rule UX validation and broader match policies remain.           |
 | SC-02 | Participant/side/throw-order model                  | Not started         | Baseline: Planned / before pairs/online teams. Next gate: Current saves migrate; singles/pairs/teams rotate correctly                                              |
 | SC-03 | Concession, pause, abandon and rematch              | Implemented / local | Replayable lifecycle, correction, terminal archive/import and rematch tests pass. Physical-device usability remains; online authority is tracked separately in RM. |
 | SC-04 | Game plugin registry plus Cricket                   | Not started         | Baseline: Planned / local alpha follow-on. Next gate: Complete rules, settings, UI and fixtures for first extra game                                               |

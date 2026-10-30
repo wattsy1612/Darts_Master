@@ -1,3 +1,5 @@
+import { createBullOff, recordBull } from './bullOff';
+import type { BullOff, BullCommand } from './bullOff';
 import { possibleVisit, rulesFor } from './x01';
 import type { X01Rules } from './x01';
 import { evaluateDarts } from './darts';
@@ -7,6 +9,7 @@ export type Setup = X01Rules & {
   start: number;
   legsToWin: number;
   setsToWin?: number;
+  startMethod?: 'manual' | 'bull-off';
   starterPolicy?: 'alternate-legs' | 'alternate-sets';
   bot?: 'rookie' | 'regular' | 'sharp';
   starter?: 0 | 1;
@@ -40,17 +43,19 @@ export type Match = {
   leg: number;
   legWinner: number | null;
   winner: number | null;
+  bullOff: BullOff | null;
   status: 'active' | 'paused' | 'completed' | 'conceded' | 'abandoned';
   concededBy: 0 | 1 | null;
   visits: RecordedVisit[];
 };
 export type Command =
+  | BullCommand
   | { type: 'visit'; visit: Visit }
   | { type: 'next-leg' }
   | { type: 'pause' | 'resume' | 'abandon' }
   | { type: 'concede'; player: 0 | 1 };
 export type Session = {
-  version: 1 | 2 | 3;
+  version: 1 | 2 | 3 | 4;
   id?: string;
   imported?: { sourceId: string; importedAt: string };
   setup: Setup;
@@ -89,6 +94,15 @@ export function createMatch(setup: Setup): Match {
     !['alternate-legs', 'alternate-sets'].includes(setup.starterPolicy)
   )
     throw new Error('Choose a valid starting-player policy.');
+  if (
+    setup.startMethod !== undefined &&
+    !['manual', 'bull-off'].includes(setup.startMethod)
+  )
+    throw new Error('Choose a valid starting method.');
+  if (setup.startMethod === 'bull-off' && setup.bot)
+    throw new Error(
+      'Bull-off requires two local players; choose a starter for practice.',
+    );
   if (setup.starterPolicy === 'alternate-sets' && !setup.setsToWin)
     throw new Error('Alternating set starters requires a sets match.');
   if (
@@ -138,12 +152,18 @@ export function createMatch(setup: Setup): Match {
     legWinner: null,
     winner: null,
     status: 'active',
+    bullOff:
+      setup.startMethod === 'bull-off'
+        ? createBullOff(setup.starter ?? 0)
+        : null,
     concededBy: null,
     visits: [],
   };
 }
 
 export function recordVisit(match: Match, visit: Visit): Match {
+  if (bullPending(match))
+    throw new Error('Finish the bull-off before recording match darts.');
   if (match.status !== 'active')
     throw new Error('Resume an active match before recording darts.');
   if (match.legWinner !== null)
@@ -259,6 +279,8 @@ export function recordVisit(match: Match, visit: Visit): Match {
 }
 
 export function nextLeg(match: Match): Match {
+  if (bullPending(match))
+    throw new Error('Finish the bull-off before starting a leg.');
   if (isTerminal(match)) throw new Error('The match is finished.');
   if (match.status !== 'active')
     throw new Error('Resume the match before starting the next leg.');
@@ -289,7 +311,7 @@ export function nextLeg(match: Match): Match {
 export function replay(session: Session): Match {
   if (
     !session ||
-    ![1, 2, 3].includes(session.version) ||
+    ![1, 2, 3, 4].includes(session.version) ||
     !Array.isArray(session.commands) ||
     session.commands.length > 10000
   )
@@ -311,6 +333,14 @@ export function replay(session: Session): Match {
     session.commands.some((c) => c?.type !== 'visit' && c?.type !== 'next-leg')
   )
     throw new Error('Match lifecycle actions require saved-match version 3.');
+  if (
+    session.version < 4 &&
+    (session.setup?.startMethod !== undefined ||
+      session.commands.some((c) => c?.type?.startsWith('bull-')))
+  )
+    throw new Error(
+      'Bull-off settings and actions require saved-match version 4.',
+    );
   let match = createMatch(session.setup);
   const visits: RecordedVisit[] = [];
   for (const command of session.commands) {
@@ -319,7 +349,27 @@ export function replay(session: Session): Match {
       visits.push(next.visits[0]);
       match = { ...next, visits };
     } else if (command?.type === 'next-leg') match = nextLeg(match);
-    else match = lifecycle(match, command);
+    else if (
+      command?.type === 'bull-throw' ||
+      command?.type === 'bull-closest' ||
+      command?.type === 'bull-rethrow'
+    ) {
+      if (match.status !== 'active' || !match.bullOff)
+        throw new Error(
+          'An active bull-off is required before recording its darts.',
+        );
+      const bullOff = recordBull(match.bullOff, command);
+      match = {
+        ...match,
+        bullOff,
+        ...(bullOff.winner !== null
+          ? {
+              turn: bullOff.winner,
+              setup: { ...match.setup, starter: bullOff.winner },
+            }
+          : {}),
+      };
+    } else match = lifecycle(match, command);
   }
   return match;
 }
@@ -454,10 +504,11 @@ export function rematch(session: Session, id: string, starter: 0 | 1): Session {
   )
     throw new Error('A rematch needs a new match identifier.');
   return {
-    version: 3,
+    version: 4,
     id,
     setup: createMatch({
       ...session.setup,
+      startMethod: undefined,
       players: [...session.setup.players],
       ...(session.setup.playerIds
         ? { playerIds: [...session.setup.playerIds] }
@@ -466,4 +517,8 @@ export function rematch(session: Session, id: string, starter: 0 | 1): Session {
     }).setup,
     commands: [],
   };
+}
+
+export function bullPending(match: Match) {
+  return !!match.bullOff && match.bullOff.winner === null;
 }

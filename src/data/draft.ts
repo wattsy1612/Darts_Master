@@ -1,6 +1,6 @@
 import { evaluateDarts } from '../domain/darts';
 import type { DartHit } from '../domain/darts';
-import { replay } from '../domain/match';
+import { replay, bullPending } from '../domain/match';
 import type { Session } from '../domain/match';
 import { openDatabase } from './repository';
 import {
@@ -44,6 +44,7 @@ export function validateDraft(value: unknown, session: Session): VisitDraft {
     typeof d.double !== 'boolean' ||
     (d.opens !== undefined && typeof d.opens !== 'boolean') ||
     match.status !== 'active' ||
+    bullPending(match) ||
     match.legWinner !== null ||
     (match.setup.bot && match.turn === 1)
   )

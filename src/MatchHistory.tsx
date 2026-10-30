@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import BullOffPanel from './BullOffPanel';
 import { dartLabel } from './domain/darts';
 import { difficulties } from './domain/bot';
 import { ruleSummary } from './domain/x01';
@@ -143,13 +144,23 @@ export default function MatchHistory({
               </p>
             )}
             {session?.commands.some(
-              (c) => c.type !== 'visit' && c.type !== 'next-leg',
+              (c) =>
+                c.type === 'pause' ||
+                c.type === 'resume' ||
+                c.type === 'concede' ||
+                c.type === 'abandon',
             ) && (
               <section aria-label="Match action history">
                 <h2>Match actions</h2>
                 <ol>
                   {session.commands
-                    .filter((c) => c.type !== 'visit' && c.type !== 'next-leg')
+                    .filter(
+                      (c) =>
+                        c.type === 'pause' ||
+                        c.type === 'resume' ||
+                        c.type === 'concede' ||
+                        c.type === 'abandon',
+                    )
                     .map((c, i) => (
                       <li key={i}>
                         {c.type === 'pause'
@@ -165,6 +176,12 @@ export default function MatchHistory({
                     ))}
                 </ol>
               </section>
+            )}
+            {match.bullOff && (
+              <BullOffPanel
+                state={match.bullOff}
+                players={match.setup.players}
+              />
             )}
             <h2>Visit by visit</h2>
             {match.visits.length ? (

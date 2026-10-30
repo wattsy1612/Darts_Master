@@ -1,4 +1,4 @@
-import { checkoutRoute } from './match';
+import { checkoutRoute, bullPending } from './match';
 import type { Match, Visit } from './match';
 import { evaluateDarts } from './darts';
 import type { DartHit } from './darts';
@@ -71,6 +71,7 @@ export function botVisit(match: Match, seed: string): Visit {
     !match.setup.bot ||
     match.turn !== 1 ||
     match.legWinner !== null ||
+    bullPending(match) ||
     match.status !== 'active'
   )
     throw new Error('The practice opponent is not due to throw.');

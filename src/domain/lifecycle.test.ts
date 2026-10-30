@@ -187,7 +187,7 @@ describe('replayable match lifecycle', () => {
     const before = structuredClone(ended),
       next = rematch(ended, 'fresh', 1);
     expect(next).toMatchObject({
-      version: 3,
+      version: 4,
       id: 'fresh',
       commands: [],
       setup: { ...ended.setup, starter: 1 },
