@@ -1,34 +1,62 @@
-# Darts application — working title
+# Darts Master — working title
 
-A universal darts platform planned for manual and automatic scoring, interactive match rooms, team lobbies, tournaments, player statistics, and streaming. The final name is undecided.
+The start of a universal darts platform: manual scoring now; supported automatic scoring integrations, online match rooms, teams, tournaments and streaming planned. The final product name is undecided.
 
-## Development environment
+## Run the app
 
-Development runs in Ubuntu 26.04 under WSL2 on the Windows Dell. Run project commands in WSL so that Node, Python, dependencies, and tests use the same environment.
-
-- Node.js 24 LTS and its bundled npm. The official Linux binary is installed under `~/.local/lib/`, with commands in `~/.local/bin/`. The download is checked against the official SHA-256 manifest. `.nvmrc` records the version; a version manager is not required on this machine.
-- Git for version control.
-- Python 3.14 with virtual environment support, for future camera tooling.
-- GCC, G++, and Make for dependencies that compile native code.
-- GitHub CLI (`gh`); publishing requires an authenticated GitHub account.
-- VS Code on Windows, with the WSL extension for editing and running inside Ubuntu.
-
-From this directory in WSL:
+Use **Ubuntu / WSL**, not Windows PowerShell, for project commands. Node 24 LTS is required; the exact development version is recorded in `.nvmrc`.
 
 ```bash
-./scripts/check-dev.sh
+npm ci
+npm run dev
 ```
 
-To open this folder from VS Code on Windows, use **WSL: Open Folder in WSL** and select:
+On the Dell, open **http://localhost:5173** in a browser. When working from another computer, forward port 5173 over your SSH connection. The development server is not a production deployment.
 
-```text
-/mnt/c/Users/watts/Documents/ChatGPT/Darts Master
+## Available now
+
+- Two-player 301, 501 and 701, with a configurable number of legs to win.
+- Manual visit entry with keypad and keyboard support; 1–3 darts per visit.
+- Double-out rules, including bull finishes, busts and impossible-score validation.
+- Checkout suggestions, three-dart averages, best visits and alternating leg starts.
+- Undo for both scoring and starting the next leg.
+- A visit log and automatic recovery of the current match after refreshing.
+- Responsive layouts for desktop and phone screens.
+
+The current match stays in this browser's local storage. **Starting a new match replaces it.** There is no account, permanent archive or cloud sync yet. Match history means the current match's visit log. External fonts use system fallbacks if unavailable.
+
+## Checks and development tools
+
+```bash
+./scripts/check-dev.sh        # Check the machine's development tools
+npm run check                # TypeScript, scoring tests and production build
+npx playwright install chromium
+npm run test:e2e             # Browser tests; starts its own test server
+npm run test:watch            # Scoring tests during development
+npm run format               # Format source and configuration
+npm run build
+npm run preview              # Serve the production build locally
 ```
 
-Keep secrets in ignored `.env` files. Commit only placeholder values in `.env.example`.
+On a new Linux machine, browser tests may also require `npx playwright install-deps chromium` with administrator privileges. These libraries and Chromium are installed on the Dell. GitHub Actions runs the application checks and browser tests on pushes to `main`, `codex/**` branches and pull requests.
 
-## First application milestone
+Installed development tools on the Dell:
 
-Build and test the match engine and a usable local scorer while cameras are on order. Start with 501, player setup, double-out, bust handling, and undo. Separate score input from match rules so future supported camera integrations can submit the same scoring events.
+- VS Code on Windows with WSL support.
+- Node 24 LTS and bundled npm, installed from the official Linux archive with SHA-256 verification under `~/.local/lib/`; commands are linked in `~/.local/bin/`.
+- Git and GitHub CLI, authenticated for the project.
+- Python 3.14 with virtual environment support for future camera tooling.
+- GCC, G++ and Make for dependencies with native components.
 
-Online rooms, teams, tournaments, streaming, and external detection integrations are planned work; none are implemented yet. Integrations depend on each provider's available interfaces. No application server exists yet.
+In VS Code, use **WSL: Open Folder in WSL** and choose `/mnt/c/Users/watts/Documents/ChatGPT/Darts Master`. Recommended editor extensions are recorded in `.vscode/extensions.json`. Keep secrets in ignored `.env` files; use placeholders in a committed `.env.example` if needed.
+
+## Code layout
+
+- `src/domain/match.ts`: pure scoring rules and replayable match commands. It has no React, browser or camera dependency.
+- `src/domain/match.test.ts`: scoring rules, finishes, statistics and replay tests.
+- `src/App.tsx`: local match setup, scorer, persistence and navigation.
+- `src/style.css`: responsive interface and provisional visual identity.
+- `tests/e2e/`: browser coverage for complete scoring flows, recovery and mobile layout.
+- `.github/workflows/ci.yml`: automated checks.
+
+Future input adapters will translate supported detection events into domain commands. No external scoring service is connected yet; each integration will depend on its available interfaces. Online rooms, permanent player profiles, teams, tournaments, video and custom detection are future milestones.
