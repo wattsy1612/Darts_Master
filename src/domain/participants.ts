@@ -220,3 +220,21 @@ export function freshRosterId() {
     `roster-${Date.now()}-${Math.random().toString(36).slice(2)}`
   );
 }
+
+export function currentThrower(match: {
+  sides: MatchSide[];
+  turn: number;
+  memberCursor: number[];
+}) {
+  return match.sides[match.turn].members[match.memberCursor[match.turn]];
+}
+export function nextEligible(
+  match: { sides: MatchSide[]; withdrawn: boolean[] },
+  start: number,
+) {
+  for (let offset = 0; offset < match.sides.length; offset++) {
+    const side = (start + offset) % match.sides.length;
+    if (!match.withdrawn[side]) return side;
+  }
+  throw new Error('No active side remains.');
+}

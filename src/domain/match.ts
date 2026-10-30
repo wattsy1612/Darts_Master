@@ -1,8 +1,16 @@
+import { gameIdOf, x01RulesVersion } from './games/identity';
 import { checkedBotSettings } from './botSettings';
 import type { BotSettings } from './botSettings';
 import { inputSources, visitStatistics } from './metrics';
 import type { InputSource, InputOrigin } from './metrics';
-import { getSides, rosterView } from './participants';
+import {
+  getSides,
+  rosterView,
+  currentThrower,
+  nextEligible,
+} from './participants';
+export { currentThrower, nextEligible } from './participants';
+import { applyLifecycle, terminal } from './games/lifecycle';
 import type { MatchSide, RosterSettings } from './participants';
 import { createBullOff, recordBull } from './bullOff';
 import type { BullOff, BullCommand } from './bullOff';
@@ -74,6 +82,8 @@ export type Command =
   | { type: 'pause' | 'resume' | 'abandon' }
   | { type: 'concede'; player: number; sideId?: string };
 export type Session = {
+  game?: 'x01';
+  rulesVersion?: typeof x01RulesVersion;
   version: 1 | 2 | 3 | 4 | 5;
   id?: string;
   imported?: { sourceId: string; importedAt: string };
@@ -388,6 +398,13 @@ export function replay(session: Session): Match {
     session.commands.length > 10000
   )
     throw new Error('Saved match is invalid.');
+  if (gameIdOf(session) !== 'x01')
+    throw new Error('Use the Cricket game engine for a Cricket session.');
+  if (
+    session.rulesVersion !== undefined &&
+    session.rulesVersion !== x01RulesVersion
+  )
+    throw new Error('This X01 rules version is not supported.');
   if (
     session.version === 1 &&
     (![301, 501, 701].includes(session.setup?.start) ||
@@ -570,52 +587,20 @@ export function formatSummary(setup: Setup) {
 }
 
 export function isTerminal(match: Match) {
-  return (
-    match.status === 'completed' ||
-    match.status === 'conceded' ||
-    match.status === 'abandoned'
-  );
+  return terminal(match);
 }
 export function lifecycle(match: Match, command: Command): Match {
-  if (isTerminal(match))
+  if (
+    command?.type === 'pause' ||
+    command?.type === 'resume' ||
+    command?.type === 'abandon' ||
+    command?.type === 'concede'
+  )
+    return applyLifecycle(match, command);
+  if (terminal(match))
     throw new Error(
       'The match is finished. Undo its final action to correct it.',
     );
-  if (command?.type === 'pause') {
-    if (match.status !== 'active')
-      throw new Error('The match is already paused.');
-    return { ...match, status: 'paused' };
-  }
-  if (command?.type === 'resume') {
-    if (match.status !== 'paused') throw new Error('The match is not paused.');
-    return { ...match, status: 'active' };
-  }
-  if (command?.type === 'abandon')
-    return { ...match, status: 'abandoned', winner: null };
-  if (command?.type === 'concede') {
-    if (
-      !Number.isInteger(command.player) ||
-      command.player < 0 ||
-      command.player >= match.sides.length ||
-      match.withdrawn[command.player]
-    )
-      throw new Error('Choose which active side is conceding.');
-    if (
-      command.sideId !== undefined &&
-      command.sideId !== match.sides[command.player].id
-    )
-      throw new Error('The conceding side does not match.');
-    const withdrawn = [...match.withdrawn];
-    withdrawn[command.player] = true;
-    const remaining = withdrawn.flatMap((gone, i) => (gone ? [] : [i]));
-    const next = { ...match, withdrawn, concededBy: command.player };
-    return {
-      ...next,
-      ...(remaining.length === 1
-        ? { status: 'conceded' as const, winner: remaining[0] }
-        : { turn: nextEligible(next, match.turn) }),
-    };
-  }
   throw new Error('Saved match contains an unknown action.');
 }
 export function rematch(
@@ -639,6 +624,8 @@ export function rematch(
   )
     throw new Error('Choose who starts the rematch.');
   return {
+    game: 'x01',
+    rulesVersion: x01RulesVersion,
     version: 5,
     id,
     setup: createMatch(
@@ -664,19 +651,6 @@ export function bullPending(match: Match) {
   return !!match.bullOff && match.bullOff.winner === null;
 }
 
-export function currentThrower(match: Match) {
-  return match.sides[match.turn].members[match.memberCursor[match.turn]];
-}
-export function nextEligible(
-  match: Pick<Match, 'withdrawn' | 'sides'>,
-  start: number,
-) {
-  for (let offset = 0; offset < match.sides.length; offset++) {
-    const side = (start + offset) % match.sides.length;
-    if (!match.withdrawn[side]) return side;
-  }
-  throw new Error('No active side remains.');
-}
 export function bullNames(match: Match): [string, string] {
   return match.sides.map((s) =>
     s.members.length === 1 ? s.name : `${s.members[0].name} · ${s.name}`,

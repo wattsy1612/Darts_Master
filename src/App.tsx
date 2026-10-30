@@ -1,3 +1,4 @@
+import { x01RulesVersion } from './domain/games/identity';
 import { previewCorrection } from './domain/correction';
 import { backupText } from './data/backup';
 import type { CorrectionReview } from './VisitCorrection';
@@ -600,6 +601,8 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
         );
       const checked = createMatch(resolveNames(setup));
       setSession({
+        game: 'x01',
+        rulesVersion: x01RulesVersion,
         version: 5,
         id: matchId(),
         setup: checked.setup,
@@ -676,7 +679,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.15</span>
+          Development build <span>v0.16</span>
         </div>
       </aside>
       <div className="main-shell">

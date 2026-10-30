@@ -2,9 +2,9 @@
 
 The active goal covers the complete [implementation plan](IMPLEMENTATION_PLAN.md), [design brief](DESIGN_BRIEF.md) and all 83 items in the [feature backlog](FEATURE_BACKLOG.md). Status is evidence-based: an existing prototype feature or a partial implementation is not a completed public-release workstream.
 
-## Current increment — v0.15
+## Current increment — v0.16
 
-Match history now supports reviewed earlier human-visit corrections. Operators preview downstream replay/removal, scores/outcomes and reopening, acknowledge suffix removal/current-game replacement, and protect unsubmitted drafts. Exact-session/revision checks and an atomic pre-correction workspace protect current/archive data; revision-limited undo and downloadable recovery survive reload/offline play. See [correction policy](CORRECTIONS.md) and [evidence](evidence/CORRECTIONS_2026-10-30.md). Hosted permissions/approvals, permanent audits, provider overrides and competition propagation are specified but unimplemented; the full goal remains active.
+The typed game registry and standard split-bull Cricket engine are implemented as internal dependencies. X01 canonicalisation is independent of browser storage; turn/member and lifecycle helpers are shared. New X01 records carry explicit game/rules identity while old schemas/hashes remain supported. Unknown game/rule payloads cannot be silently imported as X01. See [game contracts](GAME_CONTRACTS.md) and [evidence](evidence/GAME_REGISTRY_2026-10-30.md). Cricket remains unavailable in the chooser until common persistence, UI, history/profile, correction and offline journeys are integrated. SC-04 and the complete platform goal remain open.
 
 ## Product decisions and external evidence
 
@@ -36,7 +36,7 @@ Match history now supports reviewed earlier human-visit corrections. Operators p
 | SC-01 | X01 rules/sets configuration                        | Implemented / local | Configurable rules, sets, starter rotation and saved local bull-off fixtures pass; physical-device/rule UX validation and broader match policies remain.                |
 | SC-02 | Participant/side/throw-order model                  | Implemented / local | v1–v4 projection, v5 side/member/actor IDs, singles/multiplayer/pairs/teams rotation and individual metrics tested. Physical-device and online membership gates remain. |
 | SC-03 | Concession, pause, abandon and rematch              | Implemented / local | Replayable lifecycle, correction, terminal archive/import and rematch tests pass. Physical-device usability remains; online authority is tracked separately in RM.      |
-| SC-04 | Game plugin registry plus Cricket                   | Not started         | Baseline: Planned / local alpha follow-on. Next gate: Complete rules, settings, UI and fixtures for first extra game                                                    |
+| SC-04 | Game plugin registry plus Cricket                   | In progress | Typed registry and standard Cricket domain/replay fixtures implemented. Cricket persistence, playing UI, history/profile/correction and device gates remain. |
 | SC-05 | Additional party and training games                 | Not started         | Baseline: Planned / expansion. Next gate: Every published mode has tested supported formats                                                                             |
 | IN-01 | Visual/precision/keypad entry                       | Existing / partial  | Baseline: Existing / harden in local alpha. Next gate: Equivalent legal results and accessible interaction                                                              |
 | IN-02 | Unified correction/review policy                    | In progress | Local historical review/replay/removal, draft protection, atomic recovery and offline tests pass. Online authority and physical usability remain. |
@@ -90,7 +90,7 @@ Match history now supports reviewed earlier human-visit corrections. Operators p
 | EX-02 | Rankings, ladders and community challenges          | Not started         | Baseline: Planned / expansion. Next gate: Eligibility and trusted-event policy prevent bot/import contamination                                                         |
 | EX-03 | Pricing, billing and entitlements                   | Not started         | Baseline: Conditional / commercial release. Next gate: Complete billing/cancel/failure/support lifecycle                                                                |
 | EX-04 | Independent detection/compact appliance             | Not started         | Baseline: Spike / separate programme. Next gate: Accuracy/resource/support case before product commitment                                                               |
-| EN-01 | Module/routes/domain contract refactor              | In progress         | Refresh/back/forward-aware page URLs added; broader domain/module refactor remains.                                                                                     |
+| EN-01 | Module/routes/domain contract refactor              | In progress | Routes, independent session normalisation, shared roster/lifecycle and typed game adapters implemented. Broader module/UI and hosted contract integration remains. |
 | EN-02 | Hosting/identity/database/media decisions           | Not started         | Baseline: Planned / cloud foundation. Next gate: Written options, trade-offs, cost and failure model                                                                    |
 | EN-03 | Staging API, database and migrations                | Not started         | Baseline: Planned / cloud foundation. Next gate: Scoped endpoints, repeatable deploy, backup/restore and migration test                                                 |
 | EN-04 | Reliable jobs, email and notifications              | Not started         | Baseline: Planned / cloud/beta. Next gate: Idempotent delivery, retries and failure visibility                                                                          |

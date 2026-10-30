@@ -12,6 +12,8 @@ Practice opponents include Rookie, Regular, Sharp and Custom. Custom independent
 
 Match history also supports reviewed earlier-visit corrections, including replay or acknowledged removal of following actions, draft/replacement safeguards and a recoverable pre-correction workspace. See the [correction policy](docs/CORRECTIONS.md) for local limits, recovery and required future online authority.
 
+The [game contract foundation](docs/GAME_CONTRACTS.md) separates X01 and Cricket rules/records. Cricket currently has a tested domain engine but is **not a playable app mode** until its shared storage, UI and recovery journeys are integrated.
+
 ## Run the app
 
 Use **Ubuntu / WSL**, not Windows PowerShell, for project commands. Node 24 LTS is required; the exact development version is recorded in `.nvmrc`.
