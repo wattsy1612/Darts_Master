@@ -7,11 +7,14 @@ The start of a universal darts platform: manual scoring now; supported automatic
 Use **Ubuntu / WSL**, not Windows PowerShell, for project commands. Node 24 LTS is required; the exact development version is recorded in `.nvmrc`.
 
 ```bash
+cd "/mnt/c/Users/watts/Documents/ChatGPT/Darts Master"
 npm ci
 npm run dev
 ```
 
-On the Dell, open **http://localhost:5173** in a browser. When working from another computer, forward port 5173 over your SSH connection. The development server is not a production deployment.
+On the Dell, you can also double-click **Start Darts.cmd** in the project folder. It starts Ubuntu in the correct directory and checks for dependencies. Keep the terminal open while using the app.
+
+Open **http://localhost:5173** in a browser on the Dell. When working from another computer, forward port 5173 over your SSH connection. The development server is not a production deployment.
 
 ## Available now
 
