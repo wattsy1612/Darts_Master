@@ -1,3 +1,4 @@
+import { checkedBotSettings } from '../domain/botSettings';
 import { readPlayers } from '../domain/players';
 import type { Player } from '../domain/players';
 import { matchId, readArchive, updateArchive } from '../domain/archive';
@@ -50,6 +51,9 @@ export function normaliseSession(value: unknown): Session {
     legsToWin: settings.legsToWin,
   };
   if (settings.bot !== undefined) setup.bot = settings.bot;
+  if (settings.botModel !== undefined) setup.botModel = settings.botModel;
+  if (settings.botSettings !== undefined)
+    setup.botSettings = checkedBotSettings(settings.botSettings);
   if (settings.starter !== undefined) setup.starter = settings.starter;
   if (settings.playerIds !== undefined) setup.playerIds = settings.playerIds;
   if (settings.inRule !== undefined) setup.inRule = settings.inRule;

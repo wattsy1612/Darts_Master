@@ -5,10 +5,12 @@ export default function ScoreEvidence({
   coverage,
   importedMatches = 0,
   ruleVariants,
+  opponentVariants,
 }: {
   coverage: ReturnType<typeof dataCoverage>;
   importedMatches?: number;
   ruleVariants?: number;
+  opponentVariants?: number;
 }) {
   return (
     <details className="score-evidence">
@@ -39,6 +41,12 @@ export default function ScoreEvidence({
         <p>
           This sample combines {ruleVariants} rule configurations. Compare
           like-for-like rules when assessing progress.
+        </p>
+      )}
+      {opponentVariants !== undefined && opponentVariants > 1 && (
+        <p>
+          This practice sample combines {opponentVariants} simulated opponent
+          configurations. Difficulty and custom settings affect the comparison.
         </p>
       )}
       {importedMatches > 0 && (

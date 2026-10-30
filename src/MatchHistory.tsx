@@ -110,6 +110,16 @@ export default function MatchHistory({
                   ` · Practice: ${difficulties[match.setup.bot].name}`}
               </p>
             </div>
+            {match.setup.bot === 'custom' && match.setup.botSettings && (
+              <p className="notice">
+                Custom opponent targets: treble{' '}
+                {Math.round(match.setup.botSettings.treble * 100)}% · double /
+                bull {Math.round(match.setup.botSettings.double * 100)}% ·
+                single / outer bull{' '}
+                {Math.round(match.setup.botSettings.single * 100)}%. Settings
+                version {match.setup.botSettings.version}.
+              </p>
+            )}
             <ScoreEvidence
               coverage={dataCoverage(match.visits)}
               importedMatches={session?.imported ? 1 : 0}

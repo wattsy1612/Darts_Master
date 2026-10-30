@@ -282,6 +282,7 @@ export default function PlayerProfiles({
                 coverage={stats.coverage}
                 importedMatches={stats.importedMatches}
                 ruleVariants={stats.ruleVariants}
+                opponentVariants={stats.opponentVariants}
               />
               <div className="profile-recent">
                 <h3>Recent results</h3>

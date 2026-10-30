@@ -1,3 +1,4 @@
+import { checkedBotSettings } from './botSettings';
 import { checkoutRoute, bullPending } from './match';
 import type { Match, Visit } from './match';
 import { evaluateDarts } from './darts';
@@ -24,6 +25,13 @@ export const difficulties = {
     treble: 0.6,
     double: 0.55,
     single: 0.95,
+  },
+  custom: {
+    name: 'Custom',
+    description: 'Choose treble, double and single target accuracy.',
+    treble: 0.35,
+    double: 0.3,
+    single: 0.82,
   },
 };
 const order = [
@@ -75,7 +83,10 @@ export function botVisit(match: Match, seed: string): Visit {
     match.status !== 'active'
   )
     throw new Error('The practice opponent is not due to throw.');
-  const skill = difficulties[match.setup.bot];
+  const skill =
+    match.setup.bot === 'custom'
+      ? checkedBotSettings(match.setup.botSettings!)
+      : difficulties[match.setup.bot];
   const random = randomFor(seed);
   const hits: DartHit[] = [];
   const rules = { ...match.setup, opened: match.opened[1] };
@@ -94,9 +105,23 @@ export function botVisit(match: Match, seed: string): Visit {
           ? skill.double
           : skill.single;
     let hit = target;
-    if (random() > accuracy) {
+    const roll = random();
+    if (match.setup.bot === 'custom' ? roll >= accuracy : roll > accuracy) {
       const miss = random();
-      if (target.number === 25)
+      // A custom single-target miss must not fall back onto that same single.
+      // Preserve the established preset miss model for deterministic old saves.
+      if (match.setup.bot === 'custom' && target.multiplier === 1)
+        hit =
+          target.number === 25
+            ? { number: miss < 0.7 ? 20 : 0, multiplier: 1 }
+            : {
+                number:
+                  miss < 0.6
+                    ? 0
+                    : order[(order.indexOf(target.number) + 1) % 20],
+                multiplier: 1,
+              };
+      else if (target.number === 25)
         hit = { number: miss < 0.7 ? 25 : 0, multiplier: 1 };
       else if (target.multiplier === 2)
         hit =
@@ -112,7 +137,7 @@ export function botVisit(match: Match, seed: string): Visit {
         miss <
         (match.setup.bot === 'rookie'
           ? 0.25
-          : match.setup.bot === 'regular'
+          : match.setup.bot === 'regular' || match.setup.bot === 'custom'
             ? 0.6
             : 0.75)
       )

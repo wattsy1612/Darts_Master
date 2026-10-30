@@ -1,3 +1,5 @@
+import { checkedBotSettings } from './botSettings';
+import type { BotSettings } from './botSettings';
 import { inputSources, visitStatistics } from './metrics';
 import type { InputSource, InputOrigin } from './metrics';
 import { getSides, rosterView } from './participants';
@@ -15,7 +17,9 @@ export type Setup = X01Rules &
     setsToWin?: number;
     startMethod?: 'manual' | 'bull-off';
     starterPolicy?: 'alternate-legs' | 'alternate-sets';
-    bot?: 'rookie' | 'regular' | 'sharp';
+    bot?: 'rookie' | 'regular' | 'sharp' | 'custom';
+    botSettings?: BotSettings;
+    botModel?: 1;
     starter?: number;
   };
 export type Visit = {
@@ -131,9 +135,16 @@ export function createMatch(setup: Setup): Match {
     throw new Error('Choose between 1 and 11 legs to win.');
   if (
     setup.bot !== undefined &&
-    !['rookie', 'regular', 'sharp'].includes(setup.bot)
+    !['rookie', 'regular', 'sharp', 'custom'].includes(setup.bot)
   )
     throw new Error('Choose a valid practice difficulty.');
+  if (setup.botModel !== undefined && (setup.botModel !== 1 || !setup.bot))
+    throw new Error(
+      'Choose a supported practice model for a practice opponent.',
+    );
+  if (setup.bot === 'custom') checkedBotSettings(setup.botSettings!);
+  else if (setup.botSettings !== undefined)
+    throw new Error('Custom settings require a custom practice opponent.');
   if (
     setup.starter !== undefined &&
     (!Number.isInteger(setup.starter) ||
@@ -422,6 +433,13 @@ export function replay(session: Session): Match {
     )
   )
     throw new Error('Visit input sources require saved-match version 5.');
+  if (
+    session.version < 5 &&
+    (session.setup.bot === 'custom' ||
+      session.setup.botSettings !== undefined ||
+      session.setup.botModel !== undefined)
+  )
+    throw new Error('Custom practice settings require saved-match version 5.');
   if (session.version === 5 && !session.setup.sides)
     throw new Error('A v5 match requires a participant roster.');
   let match = createMatch(session.setup);

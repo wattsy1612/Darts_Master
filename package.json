@@ -1,7 +1,7 @@
 {
   "name": "darts-master",
   "private": true,
-  "version": "0.13.0",
+  "version": "0.14.0",
   "type": "module",
   "engines": {
     "node": ">=24 <25"
@@ -16,7 +16,8 @@
     "test:e2e": "playwright test",
     "check": "npm run typecheck && npm test && npm run build",
     "format": "prettier --write .",
-    "test:offline": "npm run build && playwright test --config playwright.offline.config.ts"
+    "test:offline": "npm run build && playwright test --config playwright.offline.config.ts",
+    "calibrate:bot": "node scripts/measure-bot.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",

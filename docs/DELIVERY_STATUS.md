@@ -2,9 +2,9 @@
 
 The active goal covers the complete [implementation plan](IMPLEMENTATION_PLAN.md), [design brief](DESIGN_BRIEF.md) and all 83 items in the [feature backlog](FEATURE_BACKLOG.md). Status is evidence-based: an existing prototype feature or a partial implementation is not a completed public-release workstream.
 
-## Current increment — v0.13
+## Current increment — v0.14
 
-Local X01 score records now carry input-source labels for new v5 visits, derive honest legacy/bot origins and expose data coverage and unavailable metric capabilities. Side, participant and profile statistics share `x01-recorded-v1`; history/profile disclosures explain sample size, retained/imported/mixed-rule scope, weighted averages and unsupported target/coordinate/attempt metrics. No current local record is verified for competition. See [metric contract](METRICS.md) and [evidence](evidence/METRICS_2026-10-30.md). The [v0.12 participant foundation](evidence/PARTICIPANTS_2026-10-30.md) remains in place. Physical-device validation, server/provider provenance and the full platform goal remain open.
+Practice setup now includes custom treble, double/bull and single/outer-bull target probabilities, saved settings/model validation, history display and rematch/import preservation. A 3,900-position comparison preserves existing preset throws; fixed-position scoring/finishing distributions are reproducible via `npm run calibrate:bot`. Practice profiles disclose mixed opponent configurations. See [practice evidence](evidence/BOT_PRACTICE_2026-10-30.md). The [metric contract](METRICS.md) and [participant foundation](evidence/PARTICIPANTS_2026-10-30.md) remain in place. Physical usability/challenge validation and the full platform goal remain open.
 
 ## Product decisions and external evidence
 
@@ -42,7 +42,7 @@ Local X01 score records now carry input-source labels for new v5 visits, derive 
 | IN-02 | Unified correction/review policy                    | Existing / partial  | Baseline: Planned; last-action subset existing / staged. Next gate: Local and online authority/consequences specified and tested                                        |
 | IN-03 | Provenance and metric capability flags              | Implemented / local | Validated source labels, legacy/bot origins, coverage and unavailable metric flags tested. Server/provider authority remains open. |
 | IN-04 | Optional caller/voice/accessory input               | Not started         | Baseline: Spike / expansion. Next gate: Recognition/support limits and confirmation behaviour demonstrated                                                              |
-| TR-01 | Bot calibration/custom settings                     | Existing / partial  | Baseline: Planned; three levels existing / local alpha follow-on. Next gate: Measured score/finish distributions and repeatable fixtures                                |
+| TR-01 | Bot calibration/custom settings                     | Implemented / local | Versioned custom accuracy, saved/rematch/import preservation, 3900 preset compatibility throws and repeatable score/finish samples tested. Player validation remains. |
 | TR-02 | Doubles/checkouts/clock practice                    | Not started         | Baseline: Planned / local alpha follow-on. Next gate: Complete session and scoring/results flow                                                                         |
 | TR-03 | Routines, goals and progress                        | Not started         | Baseline: Planned / expansion. Next gate: Useful trend/history tied to actual training records                                                                          |
 | PL-01 | Stable local profile selection/rename               | Existing / partial  | Baseline: Existing / harden in local alpha. Next gate: No lost identity links or guest-name auto-claim                                                                  |

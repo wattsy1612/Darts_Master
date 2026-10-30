@@ -8,6 +8,8 @@ See the [full implementation plan](docs/IMPLEMENTATION_PLAN.md), [UI/UX and bran
 
 Track current goal progress in the [delivery ledger](docs/DELIVERY_STATUS.md).
 
+Practice opponents include Rookie, Regular, Sharp and Custom. Custom independently adjusts treble, double/bull and single/outer-bull target probabilities, with settings preserved in saved matches and rematches. These are simulation controls, not guaranteed averages or ratings. Run `npm run calibrate:bot` for the repeatable preset report; see [practice evidence](docs/evidence/BOT_PRACTICE_2026-10-30.md).
+
 ## Run the app
 
 Use **Ubuntu / WSL**, not Windows PowerShell, for project commands. Node 24 LTS is required; the exact development version is recorded in `.nvmrc`.

@@ -87,6 +87,7 @@ export function playerSummary(
     importedMatches = 0;
   const visits: RecordedVisit[] = [];
   const ruleVariants = new Set<string>();
+  const opponentVariants = new Set<string>();
   const recent: {
     opponent: string;
     won: boolean;
@@ -124,6 +125,14 @@ export function playerSummary(
     ruleVariants.add(
       `${match.setup.start}/${match.setup.inRule ?? 'straight'}/${match.setup.outRule ?? 'double'}/${match.setup.legsToWin}/${match.setup.setsToWin ?? 0}`,
     );
+    if (practice)
+      opponentVariants.add(
+        JSON.stringify([
+          match.setup.bot,
+          match.setup.botModel ?? 1,
+          match.setup.botSettings ?? null,
+        ]),
+      );
     visits.push(...match.visits.filter((v) => v.profileId === id));
     if (recent.length < 3)
       recent.push({
@@ -154,6 +163,7 @@ export function playerSummary(
     ...visitStatistics(visits),
     importedMatches,
     ruleVariants: ruleVariants.size,
+    opponentVariants: opponentVariants.size,
     recent,
   };
 }

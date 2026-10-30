@@ -1,3 +1,4 @@
+import { defaultBotSettings } from './domain/botSettings';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import MatchHistory from './MatchHistory';
 import DartboardEntry from './DartboardEntry';
@@ -560,7 +561,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.13</span>
+          Development build <span>v0.14</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -787,7 +788,15 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                           ),
                         }));
                         setSetup(
-                          rosterView({ ...setup, bot: undefined }, human),
+                          rosterView(
+                            {
+                              ...setup,
+                              bot: undefined,
+                              botSettings: undefined,
+                              botModel: undefined,
+                            },
+                            human,
+                          ),
                         );
                       }}
                     >
@@ -819,6 +828,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                             {
                               ...single,
                               bot: setup.bot ?? 'regular',
+                              botModel: 1 as const,
                               startMethod: undefined,
                               starter: 0,
                               startingSideId: sides[0].id,
@@ -844,7 +854,16 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                           type="button"
                           aria-pressed={setup.bot === key}
                           onClick={() =>
-                            setSetup({ ...setup, bot: key as Setup['bot'] })
+                            setSetup({
+                              ...setup,
+                              bot: key as Setup['bot'],
+                              botSettings:
+                                key === 'custom'
+                                  ? (setup.botSettings ?? {
+                                      ...defaultBotSettings,
+                                    })
+                                  : undefined,
+                            })
                           }
                         >
                           <strong>{value.name}</strong>
@@ -852,6 +871,50 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                         </button>
                       ))}
                     </div>
+                  )}
+                  {setup.bot === 'custom' && setup.botSettings && (
+                    <fieldset className="custom-opponent">
+                      <legend>Custom opponent accuracy</legend>
+                      <p>
+                        How often the simulation hits its chosen target. These
+                        settings are probabilities, not a promised match
+                        average.
+                      </p>
+                      {(['treble', 'double', 'single'] as const).map((kind) => (
+                        <label key={kind}>
+                          {kind === 'treble'
+                            ? 'Treble'
+                            : kind === 'double'
+                              ? 'Double / bull'
+                              : 'Single / outer bull'}{' '}
+                          target hit rate
+                          <span>
+                            {Math.round(setup.botSettings![kind] * 100)}%
+                          </span>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={Math.round(setup.botSettings![kind] * 100)}
+                            onChange={(event) =>
+                              setSetup({
+                                ...setup,
+                                botSettings: {
+                                  ...setup.botSettings!,
+                                  [kind]: Number(event.target.value) / 100,
+                                },
+                              })
+                            }
+                          />
+                        </label>
+                      ))}
+                      <p>
+                        A missed target can land in another scoring segment. At
+                        0% the bot can still score; at 100% it hits its chosen
+                        targets, not every checkout.
+                      </p>
+                    </fieldset>
                   )}
                   <div className="form-grid">
                     <SideSetup

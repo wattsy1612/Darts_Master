@@ -1,0 +1,62 @@
+[
+  {
+    "bot": "rookie",
+    "version": "practice-v1-sample-v1",
+    "samples": 1000,
+    "scoring": {
+      "meanVisit": 35.59,
+      "average": 35.59,
+      "darts": 3000,
+      "p10": 3,
+      "median": 26,
+      "p90": 81,
+      "firstTrebleHits": 93
+    },
+    "finishing": {
+      "score": 40,
+      "firstDoubleHits": 129,
+      "finishedVisits": 316,
+      "busts": 132
+    }
+  },
+  {
+    "bot": "regular",
+    "version": "practice-v1-sample-v1",
+    "samples": 1000,
+    "scoring": {
+      "meanVisit": 89.19,
+      "average": 89.19,
+      "darts": 3000,
+      "p10": 41,
+      "median": 85,
+      "p90": 140,
+      "firstTrebleHits": 338
+    },
+    "finishing": {
+      "score": 40,
+      "firstDoubleHits": 313,
+      "finishedVisits": 668,
+      "busts": 61
+    }
+  },
+  {
+    "bot": "sharp",
+    "version": "practice-v1-sample-v1",
+    "samples": 1000,
+    "scoring": {
+      "meanVisit": 128.81,
+      "average": 128.81,
+      "darts": 3000,
+      "p10": 81,
+      "median": 140,
+      "p90": 180,
+      "firstTrebleHits": 601
+    },
+    "finishing": {
+      "score": 40,
+      "firstDoubleHits": 551,
+      "finishedVisits": 910,
+      "busts": 17
+    }
+  }
+]
