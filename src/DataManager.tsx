@@ -16,7 +16,8 @@ import type { ImportOptions, IncomingBackup } from './data/backup';
 import { inspectFileText } from './data/inspectFile';
 import { validateDocument } from './data/workspace';
 import type { WorkspaceData } from './data/workspace';
-import { replay, isTerminal } from './domain/match';
+import { replayGame } from './domain/games/registry';
+import { terminal } from './domain/games/lifecycle';
 import ActionButton from './ui/ActionButton';
 import { OfflineSettings } from './OfflineSupport';
 
@@ -48,9 +49,15 @@ export default function DataManager({
     [problem, setProblem] = useState(''),
     [replace, setReplace] = useState(false),
     [recoveryReady, setRecoveryReady] = useState(false);
+  const [migrationReady, setMigrationReady] = useState(false);
   const [undoRevision, setUndoRevision] = useState<number | null>(null);
   const controller = useRef<AbortController | null>(null);
   useEffect(() => {
+    if (typeof repository.migrationBackup === 'function')
+      repository
+        .migrationBackup()
+        .then((data) => setMigrationReady(!!data))
+        .catch(() => {});
     repository
       .recovery()
       .then((value) => {
@@ -165,10 +172,10 @@ export default function DataManager({
             <strong>{availableData.players.length}</strong> players
           </span>
           <span>
-            <strong>{availableData.archive.length}</strong> saved matches
+            <strong>{availableData.archive.length}</strong> matches in backup
           </span>
           <span>
-            <strong>{availableData.current ? '1' : '0'}</strong> open game
+            <strong>{availableData.current ? '1' : '0'}</strong> current game
           </span>
         </div>
         <ActionButton
@@ -195,6 +202,61 @@ export default function DataManager({
             ? 'Download full backup ↓'
             : 'Download readable data ↓'}
         </ActionButton>
+        {migrationReady && (
+          <ActionButton
+            variant="secondary"
+            disabled={busy || saveState === 'saving'}
+            onClick={async () => {
+              try {
+                const data = await repository.migrationBackup();
+                if (!data)
+                  throw new Error('No pre-upgrade backup is available.');
+                download(
+                  backupText(data, [
+                    'Workspace before the shared game storage upgrade.',
+                  ]),
+                  'darts-before-game-upgrade.json',
+                );
+              } catch (e) {
+                setProblem(
+                  e instanceof Error
+                    ? e.message
+                    : 'Backup could not be downloaded.',
+                );
+              }
+            }}
+          >
+            Download pre-upgrade backup
+          </ActionButton>
+        )}
+        {saveState === 'unsaved' &&
+          !!(
+            repository.document.data.current ||
+            repository.document.data.archive.length ||
+            repository.document.data.players.length
+          ) && (
+            <ActionButton
+              variant="secondary"
+              onClick={() => {
+                try {
+                  download(
+                    backupText(repository.document.data, [
+                      'Previously saved readable data, before the latest unsaved edits.',
+                    ]),
+                    'darts-last-saved-readable.json',
+                  );
+                } catch (e) {
+                  setProblem(
+                    e instanceof Error
+                      ? e.message
+                      : 'Backup could not be downloaded.',
+                  );
+                }
+              }}
+            >
+              Download last saved readable backup
+            </ActionButton>
+          )}
         {saveState === 'unsaved' && (
           <p className="notice">
             Some changes are not saved. A backup includes the readable match
@@ -348,7 +410,7 @@ export default function DataManager({
                       {entry.session.setup.players.join(' vs ')}
                       <small>
                         {new Date(entry.completedAt).toLocaleDateString()} ·{' '}
-                        {replay(entry.session).legs.join('–')}
+                        {replayGame(entry.session).legs.join('–')}
                       </small>
                     </span>
                     <select
@@ -377,7 +439,7 @@ export default function DataManager({
               </>
             )}
             {incoming.data.current &&
-              !isTerminal(replay(incoming.data.current)) && (
+              !terminal(replayGame(incoming.data.current)) && (
                 <label className="replace-confirm">
                   <input
                     type="checkbox"

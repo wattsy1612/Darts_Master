@@ -1,8 +1,10 @@
+import type { Session } from '../../src/domain/match';
+import type { GameRecord } from '../../src/domain/games/registry';
 import type { Page } from '@playwright/test';
 import type { WorkspaceDocument } from '../../src/data/workspace';
-export async function readWorkspace(
+export async function readWorkspace<R extends GameRecord = Session>(
   page: Page,
-): Promise<WorkspaceDocument | null> {
+): Promise<WorkspaceDocument<R> | null> {
   return page.evaluate(
     () =>
       new Promise((resolve, reject) => {
@@ -35,7 +37,7 @@ export async function failWrites(
         if (
           this.name === 'workspace' &&
           key === 'current' &&
-          value?.version === 2 &&
+          [2, 3].includes(value?.version) &&
           (part === 'all' ||
             (part === 'players' && value.data.players.length > 0) ||
             (part === 'archive' && value.data.archive.length > 0))

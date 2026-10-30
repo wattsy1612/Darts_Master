@@ -1,14 +1,11 @@
+import { parseGameRecord } from '../domain/games/registry';
+import type { GameRecord } from '../domain/games/registry';
 import { evaluateDarts } from '../domain/darts';
 import type { DartHit } from '../domain/darts';
 import { replay, bullPending } from '../domain/match';
 import type { Session } from '../domain/match';
 import { openDatabase } from './repository';
-import {
-  objectStoreName,
-  workspaceKey,
-  validateDocument,
-  normaliseSession,
-} from './workspace';
+import { objectStoreName, workspaceKey, validateDocument } from './workspace';
 
 export type VisitDraft = {
   mode: 'board' | 'keypad';
@@ -26,10 +23,10 @@ export const emptyDraft = (): VisitDraft => ({
   double: false,
   opens: false,
 });
-export function turnIdentity(session: Session) {
+export function turnIdentity(session: GameRecord) {
   // The complete command prefix prevents restoring a draft after an edited history
   // happens to reach the same command count, player and remaining score.
-  return JSON.stringify(normaliseSession(session));
+  return JSON.stringify(parseGameRecord(session));
 }
 export function validateDraft(value: unknown, session: Session): VisitDraft {
   const d = value as VisitDraft;

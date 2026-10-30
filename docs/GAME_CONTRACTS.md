@@ -1,6 +1,6 @@
 # Game registry and Cricket domain contract
 
-Application v0.16, internal SC-04/EN-01 foundation. **Cricket is not yet a playable app mode.** The registry keeps it unavailable until persistence, setup, score entry, history, statistics, correction and offline browser flows are integrated. Existing local X01 remains available.
+Application v0.17, internal SC-04/EN-01 foundation. **Cricket is not yet a playable app mode.** The registry keeps it unavailable until persistence, setup, score entry, history, statistics, correction and offline browser flows are integrated. Existing local X01 remains available.
 
 ## Registry boundary
 
@@ -10,7 +10,7 @@ Historical untagged schema 1–5 documents remain X01. New X01 games/rematches i
 
 X01 canonicalisation now lives in `src/domain/session.ts`, independent of browser storage. `workspace.ts` re-exports that API to preserve callers. Shared turn-order/member selection moved to `participants.ts`; shared pause/resume/concession/abandon semantics live in `games/lifecycle.ts`. X01 retains its old exported helpers and scoring rules. Those shared helpers do not merge game-specific scores or statistics.
 
-The domain parser can validate a Cricket record, but the current workspace/importer intentionally rejects it. It cannot accidentally accept a Cricket-tagged payload as X01 even if the remaining fields resemble a valid old match. `playableGames()` exposes only X01 at this stage. SC-04 remains in progress.
+The domain parser and shared v3 workspace can validate and persist Cricket records. Public restore remains gated until the playing UI is complete; see [shared storage](SHARED_GAME_STORAGE.md). It cannot accidentally accept a Cricket-tagged payload as X01 even if the remaining fields resemble a valid old match. `playableGames()` exposes only X01 at this stage. SC-04 remains in progress.
 
 ## Rules review and deliberate variant
 
@@ -38,7 +38,7 @@ These are recorded local statistics, not a rating or verified competition record
 
 ## Remaining SC-04 acceptance work
 
-1. Integrate discriminated records into the transactional workspace/archive and reviewed import/export/recovery path, including legacy migration and cross-game conflict checks.
+1. Shared game-aware storage, recoverable workspace migration and internal import/export/recovery are implemented; public restore must remain gated until the UI supports its results.
 2. Deliver a visible game choice, explicit Cricket rules/setup, target scoreboard, segment/pass entry and per-visit draft recovery.
 3. Add game-aware results, profiles, rematches, correction consequences and data coverage without contaminating X01 records.
 4. Complete browser, production offline/update, accessibility and physical-device journeys before setting the plugin playable.

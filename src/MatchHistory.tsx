@@ -398,10 +398,10 @@ export default function MatchHistory({
           <p className="muted">Start a match to see your statistics here.</p>
         )}
         <p className="entry-hint">
-          {archives.length} finished{' '}
-          {archives.length === 1 ? 'match' : 'matches'} saved on this browser.
-          The latest 100 are kept. Export results to keep a separate copy;
-          clearing browser data removes local history.
+          {archives.length} finished X01{' '}
+          {archives.length === 1 ? 'match' : 'matches'} in this view. This
+          browser retains up to 100 matches across games. Export results to keep
+          a separate copy; clearing browser data removes local history.
         </p>
       </section>
     </div>

@@ -25,7 +25,13 @@ import { hasDraft } from './data/draft';
 import { ruleSummary, rulesFor } from './domain/x01';
 import { browserRepository } from './data/repository';
 import type { LocalRepository } from './data/repository';
-import { matchId, readArchive, updateArchive } from './domain/archive';
+import {
+  matchId,
+  readArchive,
+  updateArchive,
+  isX01Archive,
+  updateGameArchive,
+} from './domain/archive';
 import type { ArchivedMatch } from './domain/archive';
 import type { Command, Session, Setup } from './domain/match';
 import {
@@ -57,6 +63,21 @@ export default function App() {
       active = false;
     };
   }, []);
+  if (repository?.document.data.current?.game === 'cricket')
+    return (
+      <main className="boot-panel panel">
+        <h1>Your Cricket game is preserved.</h1>
+        <p>
+          The Cricket playing screen is being connected. Your current game and
+          shared history remain saved; you can download the complete backup
+          here.
+        </p>
+        <DataManager
+          repository={repository}
+          availableData={repository.document.data}
+        />
+      </main>
+    );
   return repository ? (
     <DartsApplication repository={repository} />
   ) : (
@@ -69,11 +90,14 @@ export default function App() {
 
 function DartsApplication({ repository }: { repository: LocalRepository }) {
   const saved = {
-    session: repository.document.data.current,
+    session:
+      repository.document.data.current?.game === 'cricket'
+        ? null
+        : repository.document.data.current,
     warning: repository.legacyErrors.current ?? repository.problem,
   };
   const savedArchive = {
-    matches: repository.document.data.archive,
+    matches: repository.document.data.archive.filter(isX01Archive),
     warning: repository.legacyErrors.archive ?? '',
   };
 
@@ -163,6 +187,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     saveState === 'saved' &&
       !!session &&
       !!repository.document.data.current &&
+      repository.document.data.current.game !== 'cricket' &&
       turnIdentity(session) === turnIdentity(repository.document.data.current),
     !!match &&
       !bullInProgress &&
@@ -246,7 +271,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
       .saveMatch(session)
       .then((result) => {
         if (!active) return;
-        setArchives(result.data.archive);
+        setArchives(result.data.archive.filter(isX01Archive));
         setStorageWarning('');
       })
       .catch((error) => {
@@ -308,11 +333,15 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     );
     if (affectsCurrent) {
       visitDraft.discard();
+      if (result.data.current?.game === 'cricket') {
+        window.location.reload();
+        return true;
+      }
       setSession(result.data.current);
       setRedoGroups([]);
       setEditing(false);
     }
-    setArchives(result.data.archive);
+    setArchives(result.data.archive.filter(isX01Archive));
     setAnnouncement('Reviewed correction saved with a recovery copy.');
     setStorageWarning('');
     return true;
@@ -332,11 +361,15 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     const result = await repository.undoCorrection();
     if (affectsCurrent) {
       visitDraft.discard();
+      if (result.data.current?.game === 'cricket') {
+        window.location.reload();
+        return;
+      }
       setSession(result.data.current);
       setRedoGroups([]);
       setEditing(!result.data.current);
     }
-    setArchives(result.data.archive);
+    setArchives(result.data.archive.filter(isX01Archive));
     setBotPaused(true);
     setAnnouncement(
       'Previous data restored from the correction recovery copy.',
@@ -679,7 +712,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.16</span>
+          Development build <span>v0.17</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -2048,7 +2081,22 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
               availableData={{
                 ...repository.document.data,
                 current: session,
-                archive: archives,
+                archive: session
+                  ? updateGameArchive(
+                      [
+                        ...archives,
+                        ...repository.document.data.archive.filter(
+                          (e) => e.session.game === 'cricket',
+                        ),
+                      ],
+                      session,
+                    )
+                  : [
+                      ...archives,
+                      ...repository.document.data.archive.filter(
+                        (e) => e.session.game === 'cricket',
+                      ),
+                    ],
                 players: playerStore.players,
               }}
             />

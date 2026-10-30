@@ -40,3 +40,5 @@ The UI uses “Unavailable” with a reason for unsupported metrics, not zero or
 ## Version policy
 
 Changing scope, denominator, bust/opening treatment, attribution or eligibility needs an explicit definition change, fixtures and migration/recalculation notes. Adding an input source requires schema validation and replay/import tests before UI exposure. New schemas must preserve the old source and metric interpretation rather than retroactively asserting measurements that were never captured. No persisted derived aggregate is authoritative.
+
+The 100-result archive limit is shared across games. X01 profile views include only retained X01 records; they do not convert Cricket marks/points into X01 averages. Full backups retain other game records even while their playing/profile UI is gated.

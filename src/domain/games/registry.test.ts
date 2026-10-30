@@ -65,7 +65,7 @@ describe('typed game plugin contract', () => {
       ).toThrow();
     }
   });
-  it('keeps not-yet-integrated games out of available play choices and persistence', () => {
+  it('keeps not-yet-integrated games out of public play and restore choices', () => {
     expect(playableGames().map((g) => g.id)).toEqual(['x01']);
     expect(gameRegistry.cricket.playable).toBe(false);
     expect(() => normaliseSession(cricket)).toThrow(/Cricket/);

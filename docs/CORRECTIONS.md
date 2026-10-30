@@ -51,3 +51,5 @@ RM-02/RM-04, AC-04 and adapter work must implement these boundaries before onlin
 8. Test two-account/scoped-role adversarial cases, duplicate/reordered requests, interrupted confirmation, conflict/reconnect and corrected-result agreement across real devices before marking the online acceptance gate complete.
 
 No server roles, correction request API, permanent audit, provider override or competition propagation is implemented by the local editor.
+
+Shared-game workspace note (v0.17): correction recovery captures the entire workspace, including Cricket records outside the X01 view. The historical total editor still rejects Cricket targets. A schema upgrade advances the workspace revision, so older checkpoints remain downloadable but do not directly undo over the upgrade.

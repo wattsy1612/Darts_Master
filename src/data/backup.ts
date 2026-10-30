@@ -1,16 +1,17 @@
+import { parseGameRecord, replayGame } from '../domain/games/registry';
+import type { GameRecord } from '../domain/games/registry';
+import { terminal } from '../domain/games/lifecycle';
 import { mapProfileLinks } from '../domain/participants';
 import { matchId } from '../domain/archive';
 import { readPlayers } from '../domain/players';
-import { replay, isTerminal } from '../domain/match';
 import type { Session } from '../domain/match';
-import type { ArchivedMatch } from '../domain/archive';
 import type { WorkspaceData } from './workspace';
-import { normaliseSession, sessionContent, validateData } from './workspace';
+import { sessionContent, validateData } from './workspace';
 
 export const maxBackupBytes = 20 * 1024 * 1024;
-export type IncomingBackup = {
+export type IncomingBackup<R extends GameRecord = GameRecord> = {
   createdAt: string;
-  data: WorkspaceData;
+  data: WorkspaceData<R>;
   notes: string[];
 };
 export type ImportOptions = {
@@ -18,8 +19,8 @@ export type ImportOptions = {
   matches: Record<string, 'import' | 'skip' | 'copy'>;
   resumeCurrent: boolean;
 };
-export type ImportPlan = {
-  data: WorkspaceData;
+export type ImportPlan<R extends GameRecord = GameRecord> = {
+  data: WorkspaceData<R>;
   addedMatches: number;
   addedPlayers: number;
   duplicates: number;
@@ -27,18 +28,18 @@ export type ImportPlan = {
   errors: string[];
   replacesCurrent: boolean;
 };
-function legacyId(session: Session): string {
+function legacyId(session: GameRecord): string {
   let hash = 2166136261;
   const { playerIds: _, ...legacySetup } = session.setup;
   const content =
-    session.version < 5
+    session.game !== 'cricket' && session.version < 5
       ? JSON.stringify({ setup: legacySetup, commands: session.commands })
       : sessionContent(session);
   for (const c of content) hash = Math.imul(hash ^ c.charCodeAt(0), 16777619);
   return `legacy-${(hash >>> 0).toString(16)}`;
 }
-function sessionWithId(input: unknown): Session {
-  const session = normaliseSession(input);
+function sessionWithId(input: unknown): GameRecord {
+  const session = parseGameRecord(input);
   session.id ??= legacyId(session);
   return session;
 }
@@ -47,7 +48,11 @@ export function backupText(data: WorkspaceData, notes: string[] = []): string {
   return JSON.stringify(
     {
       format: 'darts-master-backup',
-      version: 1,
+      version:
+        checked.current?.game === 'cricket' ||
+        checked.archive.some((e) => e.session.game === 'cricket')
+          ? 2
+          : 1,
       createdAt: new Date().toISOString(),
       notes,
       workspace: {
@@ -60,7 +65,15 @@ export function backupText(data: WorkspaceData, notes: string[] = []): string {
     2,
   );
 }
-export function inspectBackup(text: string): IncomingBackup {
+export function inspectBackup(text: string): IncomingBackup<Session>;
+export function inspectBackup(
+  text: string,
+  options: { allowUnavailableGames: true },
+): IncomingBackup<GameRecord>;
+export function inspectBackup(
+  text: string,
+  options?: { allowUnavailableGames?: boolean },
+): IncomingBackup<GameRecord> {
   if (new TextEncoder().encode(text).byteLength > maxBackupBytes)
     throw new Error('Choose a backup smaller than 20 MB.');
   let input: Record<string, unknown>;
@@ -69,18 +82,40 @@ export function inspectBackup(text: string): IncomingBackup {
   } catch {
     throw new Error('This file is not valid JSON. No saved data was changed.');
   }
-  if (!input || typeof input !== 'object' || input.version !== 1)
+  if (
+    !input ||
+    typeof input !== 'object' ||
+    ![1, 2].includes(input.version as number)
+  )
     throw new Error(
       'This file uses an unsupported backup version. No saved data was changed.',
     );
+  function checkGame(inputRecord: unknown) {
+    if (
+      inputRecord &&
+      typeof inputRecord === 'object' &&
+      (inputRecord as { game?: unknown }).game === 'cricket'
+    ) {
+      if (!options?.allowUnavailableGames)
+        throw new Error(
+          'Cricket is not available in this scorer yet. No saved data was changed.',
+        );
+      if (input.version !== 2)
+        throw new Error('Cricket requires backup or match export version 2.');
+    }
+  }
   const now = new Date().toISOString();
   if (input.format === 'darts-master-match') {
+    checkGame(input.session);
     const current = sessionWithId(input.session);
     // A stand-alone match file does not establish ownership of saved profiles.
-    current.setup = current.setup.sides
-      ? mapProfileLinks(current.setup, () => null)
-      : { ...current.setup, playerIds: undefined };
-    const completed = isTerminal(replay(current));
+    if (current.game === 'cricket')
+      current.setup = mapProfileLinks(current.setup, () => null);
+    else
+      current.setup = current.setup.sides
+        ? mapProfileLinks(current.setup, () => null)
+        : { ...current.setup, playerIds: undefined };
+    const completed = terminal(replayGame(current));
     return {
       createdAt: now,
       data: {
@@ -104,6 +139,8 @@ export function inspectBackup(text: string): IncomingBackup {
     source.archive.length > 100
   )
     throw new Error('This backup has an invalid player or match list.');
+  if (source.current) checkGame(source.current);
+  for (const entry of source.archive) checkGame(entry?.session);
   const current =
     source.current === null ? null : sessionWithId(source.current);
   const archive = source.archive.map((entry) => {
@@ -123,7 +160,7 @@ export function inspectBackup(text: string): IncomingBackup {
     const same = data.archive.find((entry) => entry.session.id === current.id);
     if (
       same &&
-      (!isTerminal(replay(current)) ||
+      (!terminal(replayGame(current)) ||
         sessionContent(same.session) !== sessionContent(current))
     )
       throw new Error(
@@ -132,7 +169,7 @@ export function inspectBackup(text: string): IncomingBackup {
   }
   if (
     current &&
-    isTerminal(replay(current)) &&
+    terminal(replayGame(current)) &&
     !archive.some((entry) => entry.session.id === current.id)
   )
     data.archive.unshift({ session: current, completedAt: now });
@@ -191,12 +228,12 @@ function uniqueName(name: string, used: Set<string>) {
     'Too many players have the same name. Choose a profile link instead.',
   );
 }
-export function buildImportPlan(
-  local: WorkspaceData,
-  incoming: IncomingBackup,
+export function buildImportPlan<R extends GameRecord>(
+  local: WorkspaceData<R>,
+  incoming: IncomingBackup<R>,
   options: ImportOptions,
-): ImportPlan {
-  const data: WorkspaceData = structuredClone(local),
+): ImportPlan<R> {
+  const data: WorkspaceData<R> = structuredClone(local),
     notes = [...incoming.notes],
     errors: string[] = [];
   let addedMatches = 0,
@@ -245,7 +282,7 @@ export function buildImportPlan(
       localId: map.get(profile.id)!,
     });
   }
-  function linkedSession(session: Session): Session {
+  function linkedSession<T extends GameRecord>(session: T): T {
     return {
       ...structuredClone(session),
       setup: mapProfileLinks(structuredClone(session.setup), (id) =>
@@ -287,7 +324,7 @@ export function buildImportPlan(
   if (
     options.resumeCurrent &&
     incoming.data.current &&
-    !isTerminal(replay(incoming.data.current))
+    !terminal(replayGame(incoming.data.current))
   ) {
     const candidate = incoming.data.current;
     if (

@@ -304,3 +304,64 @@ test('reviewed corrections and their recovery copy survive an offline reload', a
     .poll(async () => (await readWorkspace(page))?.data.current)
     .toEqual(original);
 });
+
+test('a cached app upgrades the prior workspace and provides its original backup while offline', async ({
+  page,
+  context,
+}) => {
+  await page.goto('/');
+  await ready(page);
+  const current = {
+    version: 1,
+    id: 'offline-upgrade',
+    setup: { players: ['A', 'B'], start: 301, legsToWin: 1 },
+    commands: [
+      { type: 'visit', visit: { total: 60, darts: 3, double: false } },
+    ],
+  };
+  await page.evaluate(
+    (current) =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('darts-master-local', 1);
+        open.onsuccess = () => {
+          const db = open.result,
+            tx = db.transaction('workspace', 'readwrite');
+          tx.objectStore('workspace').put(
+            {
+              version: 2,
+              revision: 4,
+              data: { current, archive: [], players: [], profileImports: [] },
+            },
+            'current',
+          );
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onabort = () => reject(tx.error);
+        };
+        open.onerror = () => reject(open.error);
+      }),
+    current,
+  );
+  await context.setOffline(true);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(
+    page.getByRole('article', { name: 'A score' }).locator('.remaining'),
+  ).toHaveText('241');
+  expect((await readWorkspace(page))!.version).toBe(3);
+  expect((await readWorkspace(page))!.revision).toBe(5);
+  await page
+    .getByRole('button', { name: 'Data & backups', exact: true })
+    .click();
+  await expect(
+    page.getByText('Offline · local play', { exact: true }),
+  ).toBeVisible();
+  const download = page.waitForEvent('download');
+  await page
+    .getByRole('button', { name: 'Download pre-upgrade backup' })
+    .click();
+  expect((await download).suggestedFilename()).toBe(
+    'darts-before-game-upgrade.json',
+  );
+});

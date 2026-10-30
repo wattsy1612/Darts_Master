@@ -1,6 +1,15 @@
+import { parseGameRecord, replayGame } from '../domain/games/registry';
+import type { GameRecord } from '../domain/games/registry';
+import { terminal } from '../domain/games/lifecycle';
+import { gameContent } from '../domain/games/content';
 import { readPlayers } from '../domain/players';
 import type { Player } from '../domain/players';
-import { matchId, readArchive, updateArchive } from '../domain/archive';
+import {
+  matchId,
+  readArchive,
+  updateArchive,
+  readGameArchive,
+} from '../domain/archive';
 import type { ArchivedMatch } from '../domain/archive';
 import type { Session } from '../domain/match';
 import { normaliseSession } from '../domain/session';
@@ -11,59 +20,32 @@ export const objectStoreName = 'workspace';
 export const workspaceKey = 'current';
 export const recoveryKey = 'before-import';
 export const legacySessionKey = 'darts-master.match.v1';
-export type WorkspaceData = {
-  current: Session | null;
-  archive: ArchivedMatch[];
+export type WorkspaceData<R extends GameRecord = GameRecord> = {
+  current: R | null;
+  archive: ArchivedMatch<R>[];
   players: Player[];
   profileImports: { sourceId: string; createdAt: string; localId: string }[];
 };
-export type WorkspaceDocument = {
-  version: 2;
+export type WorkspaceDocument<R extends GameRecord = GameRecord> = {
+  version: 3;
   revision: number;
-  data: WorkspaceData;
+  data: WorkspaceData<R>;
 };
 export type LegacyErrors = {
   current?: string;
   archive?: string;
   players?: string;
 };
-export const emptyData = (): WorkspaceData => ({
+export const emptyData = <
+  R extends GameRecord = Session,
+>(): WorkspaceData<R> => ({
   current: null,
   archive: [],
   players: [],
   profileImports: [],
 });
 
-export function sessionContent(session: Session): string {
-  const { playerIds: _, ...setup } = session.setup;
-  return JSON.stringify(
-    stableContent({
-      setup: {
-        ...setup,
-        ...(setup.sides
-          ? {
-              sides: setup.sides.map((s) => ({
-                ...s,
-                members: s.members.map(({ profileId: _, ...member }) => member),
-              })),
-            }
-          : {}),
-      },
-      commands: session.commands,
-    }),
-  );
-}
-function stableContent(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(stableContent);
-  if (value && typeof value === 'object')
-    return Object.fromEntries(
-      Object.entries(value)
-        .filter(([, v]) => v !== undefined)
-        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-        .map(([key, v]) => [key, stableContent(v)]),
-    );
-  return value;
-}
+export const sessionContent = gameContent;
 export function validateData(value: unknown): WorkspaceData {
   const input = value as WorkspaceData;
   if (
@@ -76,9 +58,9 @@ export function validateData(value: unknown): WorkspaceData {
   const players = readPlayers(
     JSON.stringify({ version: 1, players: input.players }),
   );
-  const archive = readArchive(
+  const archive = readGameArchive(
     JSON.stringify({ version: 1, matches: input.archive }),
-  ).map((entry) => ({ ...entry, session: normaliseSession(entry.session) }));
+  );
   const ids = new Set<string>();
   for (const entry of archive) {
     if (ids.has(entry.session.id!))
@@ -86,9 +68,21 @@ export function validateData(value: unknown): WorkspaceData {
     ids.add(entry.session.id!);
   }
   const current =
-    input.current === null ? null : normaliseSession(input.current);
+    input.current === null ? null : parseGameRecord(input.current);
   if (current && !current.id)
     throw new Error('The current match needs an identifier.');
+  const same = current
+    ? archive.find((entry) => entry.session.id === current.id)
+    : undefined;
+  if (
+    current &&
+    same &&
+    (!terminal(replayGame(current)) ||
+      gameContent(current) !== gameContent(same.session))
+  )
+    throw new Error(
+      'The current match conflicts with a saved result in this backup. No data was changed.',
+    );
   const profileImports = input.profileImports ?? [];
   if (
     !Array.isArray(profileImports) ||
@@ -110,18 +104,25 @@ export function validateData(value: unknown): WorkspaceData {
   };
 }
 export function validateDocument(value: unknown): WorkspaceDocument {
-  const input = value as WorkspaceDocument;
-  if (!input || input.version !== 2)
+  const input = value as {
+    version: number;
+    revision: number;
+    data: WorkspaceData;
+  };
+  if (!input || ![2, 3].includes(input.version))
     throw new Error(
       'This saved workspace is unreadable or uses a newer version. No data has been overwritten.',
     );
   if (!Number.isSafeInteger(input.revision) || input.revision < 0)
     throw new Error('The saved workspace revision is invalid.');
-  return {
-    version: 2,
-    revision: input.revision,
-    data: validateData(input.data),
-  };
+  const data = validateData(input.data);
+  if (
+    input.version === 2 &&
+    (data.current?.game === 'cricket' ||
+      data.archive.some((e) => e.session.game === 'cricket'))
+  )
+    throw new Error('Workspace version 2 cannot contain non-X01 games.');
+  return { version: 3, revision: input.revision, data };
 }
 export function readLegacy(storage: Pick<Storage, 'getItem'>) {
   const data = emptyData(),

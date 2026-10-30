@@ -1,3 +1,4 @@
+import { requireX01Session } from '../domain/games/identity';
 import { afterEach, describe, expect, it } from 'vitest';
 import { IDBFactory, IDBObjectStore } from 'fake-indexeddb';
 import { openLocalRepository } from './repository';
@@ -59,7 +60,9 @@ describe('transactional correction and recovery', () => {
       repo.document.revision,
     );
     expect(repo.document.data.archive).toHaveLength(0);
-    expect(replay(repo.document.data.current!).status).toBe('active');
+    expect(replay(requireX01Session(repo.document.data.current!)).status).toBe(
+      'active',
+    );
     const applied = repo.document.revision;
     await repo.saveMatch(repo.document.data.current!);
     expect(repo.document.revision).toBe(applied);
@@ -73,7 +76,7 @@ describe('transactional correction and recovery', () => {
     const repo = await open();
     await repo.saveMatch(game);
     await repo.saveMatch({ ...game, id: 'other', commands: [] });
-    const target = repo.document.data.archive[0].session;
+    const target = requireX01Session(repo.document.data.archive[0].session);
     await repo.correctMatch(
       target,
       1,
@@ -82,9 +85,9 @@ describe('transactional correction and recovery', () => {
       repo.document.revision,
     );
     expect(repo.document.data.current?.id).toBe('other');
-    expect(replay(repo.document.data.archive[0].session).scores).toEqual([
-      0, 241,
-    ]);
+    expect(
+      replay(requireX01Session(repo.document.data.archive[0].session)).scores,
+    ).toEqual([0, 241]);
   });
   it('requires explicit replacement to reopen an archive and retains the displaced game in recovery', async () => {
     const repo = await open();
@@ -214,7 +217,7 @@ describe('transactional correction and recovery', () => {
     try {
       await expect(
         repo.correctMatch(
-          repo.document.data.current!,
+          requireX01Session(repo.document.data.current!),
           1,
           score(26),
           'keep-following',
