@@ -22,11 +22,14 @@ Open **http://localhost:5173** in a browser on the Dell. When working from anoth
 - Manual visit entry with keypad and keyboard support; 1–3 darts per visit.
 - Double-out rules, including bull finishes, busts and impossible-score validation.
 - Checkout suggestions, three-dart averages, best visits and alternating leg starts.
-- Undo for both scoring and starting the next leg.
+- Undo and redo for scoring and starting the next leg, with clear score feedback.
 - A visit log and automatic recovery of the current match after refreshing.
+- Automatic archive of the latest 100 completed matches on this browser.
+- Match summaries with scoring bands, 180s and highest checkout, plus JSON export.
+- Protection against accidentally replacing an unfinished match.
 - Responsive layouts for desktop and phone screens.
 
-The current match stays in this browser's local storage. **Starting a new match replaces it.** There is no account, permanent archive or cloud sync yet. Match history means the current match's visit log. External fonts use system fallbacks if unavailable.
+The current match and latest 100 completed matches stay in this browser's local storage. Starting a new match replaces an unfinished game only after confirmation; completed results remain in history. Export a match as JSON to keep a separate copy. Clearing browser data removes local results. There is no account or cloud sync yet. External fonts use system fallbacks if unavailable.
 
 ## Checks and development tools
 
@@ -58,8 +61,10 @@ In VS Code, use **WSL: Open Folder in WSL** and choose `/mnt/c/Users/watts/Docum
 - `src/domain/match.ts`: pure scoring rules and replayable match commands. It has no React, browser or camera dependency.
 - `src/domain/match.test.ts`: scoring rules, finishes, statistics and replay tests.
 - `src/App.tsx`: local match setup, scorer, persistence and navigation.
+- `src/domain/archive.ts`: archive validation, correction handling and JSON export.
+- `src/MatchHistory.tsx`: saved results, match summaries and visit logs.
 - `src/style.css`: responsive interface and provisional visual identity.
 - `tests/e2e/`: browser coverage for complete scoring flows, recovery and mobile layout.
 - `.github/workflows/ci.yml`: automated checks.
 
-Future input adapters will translate supported detection events into domain commands. No external scoring service is connected yet; each integration will depend on its available interfaces. Online rooms, permanent player profiles, teams, tournaments, video and custom detection are future milestones.
+Future input adapters will translate supported detection events into domain commands. No external scoring service is connected yet; each integration will depend on its available interfaces. Online rooms, permanent player profiles, teams, tournaments, video and custom detection are future milestones. WSL uses polling for edits in this Windows-mounted folder so changes appear reliably during development.

@@ -21,7 +21,12 @@ export type Match = {
   visits: RecordedVisit[];
 };
 export type Command = { type: 'visit'; visit: Visit } | { type: 'next-leg' };
-export type Session = { version: 1; setup: Setup; commands: Command[] };
+export type Session = {
+  version: 1;
+  id?: string;
+  setup: Setup;
+  commands: Command[];
+};
 
 const values = [
   ...new Set([
@@ -166,6 +171,15 @@ export function playerStats(match: Match, player: number) {
     average: darts ? ((scored / darts) * 3).toFixed(1) : '—',
     darts,
     best: visits.reduce((n, v) => Math.max(n, v.bust ? 0 : v.total), 0),
+    tons: visits.filter((v) => !v.bust && v.total >= 100 && v.total < 140)
+      .length,
+    ton40s: visits.filter((v) => !v.bust && v.total >= 140 && v.total < 180)
+      .length,
+    maximums: visits.filter((v) => !v.bust && v.total === 180).length,
+    highestCheckout: visits.reduce(
+      (n, v) => Math.max(n, v.checkout ? v.total : 0),
+      0,
+    ),
   };
 }
 

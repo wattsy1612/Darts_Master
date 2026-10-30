@@ -93,7 +93,7 @@ describe('match rules', () => {
   it('includes darts but no points from busts in averages', () => {
     const at21 = visit(readyToFinish(), 100);
     const bust = visit(visit(at21, 0), 20);
-    expect(playerStats(bust, 0)).toEqual({
+    expect(playerStats(bust, 0)).toMatchObject({
       average: '93.3',
       darts: 9,
       best: 180,

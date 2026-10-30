@@ -1,4 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import MatchHistory from './MatchHistory';
+import {
+  archiveKey,
+  matchId,
+  readArchive,
+  updateArchive,
+} from './domain/archive';
+import type { ArchivedMatch } from './domain/archive';
 import type { Command, Session, Setup } from './domain/match';
 import {
   checkoutRoute,
@@ -19,6 +27,7 @@ function load(): { session: Session | null; warning: string } {
     if (!raw) return { session: null, warning: '' };
     const session: Session = JSON.parse(raw);
     replay(session);
+    session.id ??= matchId();
     return { session, warning: '' };
   } catch {
     return {
@@ -29,12 +38,34 @@ function load(): { session: Session | null; warning: string } {
   }
 }
 const saved = load();
+function loadArchive() {
+  try {
+    return {
+      matches: readArchive(localStorage.getItem(archiveKey)),
+      warning: '',
+    };
+  } catch {
+    return {
+      matches: [],
+      warning:
+        'Your match archive could not be loaded. Existing archive data will be kept until you choose to reset it.',
+    };
+  }
+}
+const savedArchive = loadArchive();
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(saved.session);
   const [setup, setSetup] = useState<Setup>(
     saved.session?.setup ?? initialSetup,
   );
+  const [archives, setArchives] = useState<ArchivedMatch[]>(
+    savedArchive.matches,
+  );
+  const [archiveError, setArchiveError] = useState(savedArchive.warning);
+  const [redoCommands, setRedoCommands] = useState<Command[]>([]);
+  const [replaceConfirmed, setReplaceConfirmed] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
   const [editing, setEditing] = useState(!saved.session);
   const [score, setScore] = useState('');
   const [darts, setDarts] = useState(3);
@@ -44,17 +75,35 @@ export default function App() {
   const [tab, setTab] = useState<'score' | 'history' | 'roadmap'>('score');
   const match = useMemo(() => (session ? replay(session) : null), [session]);
   const route = match ? checkoutRoute(match.scores[match.turn]) : null;
+  const resultSaved =
+    !!session && archives.some((entry) => entry.session.id === session.id);
+  const replacementNeedsConfirmation =
+    !!match &&
+    match.visits.length > 0 &&
+    (match.winner === null || !resultSaved);
   const finishing =
     !!match && score !== '' && Number(score) === match.scores[match.turn];
 
   useEffect(() => {
     if (!session) return;
+    if (!session.id) {
+      setSession({ ...session, id: matchId() });
+      return;
+    }
     try {
       localStorage.setItem(storageKey, JSON.stringify(session));
+      if (!archiveError) {
+        const nextArchives = updateArchive(archives, session);
+        localStorage.setItem(
+          archiveKey,
+          JSON.stringify({ version: 1, matches: nextArchives }),
+        );
+        setArchives(nextArchives);
+      }
       setStorageWarning('');
     } catch {
       setStorageWarning(
-        'Browser storage is unavailable or full. This match will not be saved after you close the page.',
+        'Some match data could not be saved. Browser storage may be unavailable or full. Keep this page open and export your result.',
       );
     }
   }, [session]);
@@ -66,7 +115,16 @@ export default function App() {
       commands: [...session.commands, command],
     };
     try {
-      replay(next);
+      const result = replay(next);
+      const last = result.visits.at(-1);
+      setAnnouncement(
+        command.type === 'next-leg'
+          ? `Leg ${result.leg}. ${result.setup.players[result.turn]} throws first.`
+          : last
+            ? `${result.setup.players[last.player]}: ${last.bust ? 'bust. Score unchanged.' : last.checkout ? `${last.total}. Game shot!` : `${last.total} scored. ${result.scores[last.player]} remaining.`}`
+            : '',
+      );
+      setRedoCommands([]);
       setSession(next);
       setScore('');
       setDouble(false);
@@ -90,11 +148,30 @@ export default function App() {
   }
   function undo() {
     if (!session) return;
+    const removed = session.commands.at(-1);
+    if (!removed) return;
+    setRedoCommands([removed, ...redoCommands]);
     setSession({ ...session, commands: session.commands.slice(0, -1) });
+    setAnnouncement('Last action undone.');
     setScore('');
     setError('');
     setDouble(false);
     setDarts(3);
+  }
+  function redo() {
+    if (!session || !redoCommands.length) return;
+    const next = {
+      ...session,
+      commands: [...session.commands, redoCommands[0]],
+    };
+    replay(next);
+    setSession(next);
+    setRedoCommands(redoCommands.slice(1));
+    setScore('');
+    setDouble(false);
+    setDarts(3);
+    setError('');
+    setAnnouncement('Last action restored.');
   }
   useEffect(() => {
     function key(event: KeyboardEvent) {
@@ -132,8 +209,20 @@ export default function App() {
   function start(event: React.FormEvent) {
     event.preventDefault();
     try {
+      if (replacementNeedsConfirmation && !replaceConfirmed)
+        throw new Error(
+          'Confirm that you want to replace this match, or go back to continue or export it.',
+        );
       const checked = createMatch(setup);
-      setSession({ version: 1, setup: checked.setup, commands: [] });
+      setSession({
+        version: 1,
+        id: matchId(),
+        setup: checked.setup,
+        commands: [],
+      });
+      setRedoCommands([]);
+      setReplaceConfirmed(false);
+      setAnnouncement('');
       setEditing(false);
       setError('');
       setScore('');
@@ -197,7 +286,7 @@ export default function App() {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.1</span>
+          Development build <span>v0.2</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -223,7 +312,7 @@ export default function App() {
                 {tab === 'score'
                   ? 'A proper game. A clear score. One dart at a time.'
                   : tab === 'history'
-                    ? 'The complete visit log for your current match.'
+                    ? 'Saved matches, player stats and every visit at the board.'
                     : 'One home for your game, your team and your competition.'}
               </p>
             </div>
@@ -232,6 +321,8 @@ export default function App() {
                 className="button secondary"
                 onClick={() => {
                   setSetup(match.setup);
+                  setReplaceConfirmed(false);
+                  setTab('score');
                   setEditing(true);
                   setError('');
                 }}
@@ -244,6 +335,37 @@ export default function App() {
             <p role="status" className="notice">
               {storageWarning}
             </p>
+          )}
+          {archiveError && (
+            <div role="alert" className="notice">
+              {archiveError}{' '}
+              <button
+                className="text-button"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      'Reset the unreadable match archive? This cannot be undone.',
+                    )
+                  ) {
+                    try {
+                      localStorage.removeItem(archiveKey);
+                      setArchiveError('');
+                    } catch {
+                      setArchiveError(
+                        'Browser storage is unavailable. The archive could not be reset.',
+                      );
+                    }
+                  }
+                }}
+              >
+                Reset archive
+              </button>
+            </div>
+          )}
+          {announcement && tab === 'score' && !editing && (
+            <div className="score-feedback" role="status" aria-live="polite">
+              {announcement}
+            </div>
           )}
           {tab === 'score' &&
             (editing ? (
@@ -308,9 +430,24 @@ export default function App() {
                   </div>
                   {match && (
                     <p className="notice">
-                      Starting a new match replaces the match saved on this
-                      device.
+                      {match.winner === null
+                        ? 'Starting a new match replaces your unfinished game.'
+                        : resultSaved
+                          ? 'This result is saved in match history on this device.'
+                          : 'This result has not been saved in history. Export it before starting another match.'}
                     </p>
+                  )}
+                  {replacementNeedsConfirmation && (
+                    <label className="replace-confirm">
+                      <input
+                        type="checkbox"
+                        checked={replaceConfirmed}
+                        onChange={(e) => setReplaceConfirmed(e.target.checked)}
+                      />
+                      {match?.winner === null
+                        ? 'Replace my unfinished match'
+                        : 'Continue without saving this result'}
+                    </label>
                   )}
                   {error && (
                     <p role="alert" className="error">
@@ -418,6 +555,14 @@ export default function App() {
                                 ? 'wins the match!'
                                 : 'takes the leg.'}
                             </h2>
+                            {match.winner !== null && (
+                              <button
+                                className="button primary"
+                                onClick={() => setTab('history')}
+                              >
+                                View match summary →
+                              </button>
+                            )}
                             {match.winner === null && (
                               <button
                                 className="button primary"
@@ -461,13 +606,23 @@ export default function App() {
                             / camera connection coming later
                           </span>
                         </span>
-                        <button
-                          disabled={!session?.commands.length}
-                          className="text-button"
-                          onClick={undo}
-                        >
-                          ↶ Undo last action
-                        </button>
+                        <div className="correction-actions">
+                          <button
+                            disabled={!session?.commands.length}
+                            className="text-button"
+                            onClick={undo}
+                          >
+                            ↶ Undo last action
+                          </button>
+                          <button
+                            className="text-button"
+                            disabled={!redoCommands.length}
+                            aria-label="Redo"
+                            onClick={redo}
+                          >
+                            ↷ Redo
+                          </button>
+                        </div>
                       </div>
                     </section>
                     <section
@@ -633,52 +788,7 @@ export default function App() {
               )
             ))}
           {tab === 'history' && (
-            <section className="panel history">
-              <div className="section-label">THE MATCH LOG</div>
-              <h2>Visit by visit</h2>
-              {match?.visits.length ? (
-                <div className="table-scroll">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Visit</th>
-                        <th>Leg</th>
-                        <th>Player</th>
-                        <th>Score</th>
-                        <th>Darts</th>
-                        <th>Result</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {match.visits.map((v, i) => (
-                        <tr key={i}>
-                          <td>{i + 1}</td>
-                          <td>{v.leg}</td>
-                          <td>{match.setup.players[v.player]}</td>
-                          <td>{v.total}</td>
-                          <td>{v.darts}</td>
-                          <td>
-                            {v.bust
-                              ? 'Bust · no score'
-                              : v.checkout
-                                ? 'Game shot'
-                                : 'Scored'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="muted">
-                  No visits yet. Start a match and step up to the board.
-                </p>
-              )}
-              <p className="entry-hint">
-                Only the current match is saved. A permanent match archive is
-                planned.
-              </p>
-            </section>
+            <MatchHistory current={session} archives={archives} />
           )}
           {tab === 'roadmap' && (
             <section className="roadmap">
