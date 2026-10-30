@@ -79,6 +79,9 @@ export default function PlayerProfiles({
 }) {
   const [name, setName] = useState('');
   const [practice, setPractice] = useState(false);
+  const [format, setFormat] = useState<
+    'singles' | 'multiplayer' | 'team' | 'all'
+  >('singles');
   const [editing, setEditing] = useState<string | null>(null);
   const [rename, setRename] = useState('');
   const sorted = useMemo(
@@ -90,10 +93,10 @@ export default function PlayerProfiles({
       new Map(
         sorted.map((player) => [
           player.id,
-          playerSummary(archives, player.id, practice),
+          playerSummary(archives, player.id, practice, format),
         ]),
       ),
-    [sorted, archives, practice],
+    [sorted, archives, practice, format],
   );
   return (
     <div className="players-page">
@@ -142,9 +145,21 @@ export default function PlayerProfiles({
         </div>
       </div>
       <p className="muted">
-        Records combine all retained local X01 rule and match formats in the
-        selected mode. They are not verified rankings.
+        Records combine retained local X01 rule variants within the selected
+        match format and mode. They are not verified rankings.
       </p>
+      <label className="record-format">
+        Record format
+        <select
+          value={format}
+          onChange={(e) => setFormat(e.target.value as typeof format)}
+        >
+          <option value="singles">Singles</option>
+          <option value="multiplayer">Multiplayer</option>
+          <option value="team">Pairs and teams</option>
+          <option value="all">All local formats</option>
+        </select>
+      </label>
       {!players.length && (
         <section className="panel empty-players">
           <span className="brand-mark" aria-hidden="true">
@@ -241,8 +256,18 @@ export default function PlayerProfiles({
                 {[
                   ['3-dart average', stats.average],
                   ['Matches', stats.matches],
-                  ['Legs won', stats.legsWon],
-                  ['Legs lost', stats.legsLost],
+                  [
+                    format === 'team' || format === 'all'
+                      ? 'Side legs won'
+                      : 'Legs won',
+                    stats.legsWon,
+                  ],
+                  [
+                    format === 'team' || format === 'all'
+                      ? 'Opposing legs'
+                      : 'Legs lost',
+                    stats.legsLost,
+                  ],
                   ['180s', stats.maximums],
                   ['Highest checkout', stats.highestCheckout || '—'],
                 ].map(([label, value]) => (

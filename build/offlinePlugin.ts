@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import type { Plugin } from 'vite';
 const publicFiles = [
   'manifest.webmanifest',
+  'fonts/DM-Sans-OFL.txt',
+  'fonts/Barlow-Condensed-OFL.txt',
   'icon.svg',
   'icon-192.png',
   'icon-512.png',

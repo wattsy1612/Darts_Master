@@ -13,6 +13,8 @@ const types = {
   '.webmanifest': 'application/manifest+json',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.ttf': 'font/ttf',
+  '.txt': 'text/plain',
 };
 createServer(async (request, response) => {
   const pathname = new URL(request.url, 'http://localhost').pathname;

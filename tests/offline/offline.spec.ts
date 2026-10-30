@@ -183,7 +183,13 @@ test('an interrupted update leaves the previous shell usable offline and retries
 
 test('only public shell assets are cached, leaving unrelated caches and API requests alone', async ({
   page,
+  context,
 }) => {
+  const external: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).origin !== 'http://127.0.0.1:5180')
+      external.push(request.url());
+  });
   await page.goto('/');
   await ready(page);
   await page.evaluate(async () => {
@@ -202,6 +208,9 @@ test('only public shell assets are cached, leaving unrelated caches and API requ
     return urls;
   });
   expect(cached).toContain('/index.html');
+  expect(cached.filter((path) => path.endsWith('.ttf'))).toHaveLength(5);
+  expect(cached).toContain('/fonts/DM-Sans-OFL.txt');
+  expect(cached).toContain('/fonts/Barlow-Condensed-OFL.txt');
   expect(cached.some((p) => p.startsWith('/assets/'))).toBe(true);
   expect(cached.some((p) => /api|match|players|__test/.test(p))).toBe(false);
   const response = await page.evaluate(async () => {
@@ -211,6 +220,16 @@ test('only public shell assets are cached, leaving unrelated caches and API requ
   expect(response.status).toBe(404);
   expect(response.text).not.toContain('<!doctype');
   expect(await page.evaluate(() => caches.has('unrelated-app'))).toBe(true);
+  await context.setOffline(true);
+  const loaded = await page.evaluate(async () => {
+    const faces = await Promise.all([
+      document.fonts.load('400 16px "DM Sans"'),
+      document.fonts.load('800 32px "Barlow Condensed"'),
+    ]);
+    return faces.map((group) => group.map((face) => face.status));
+  });
+  expect(loaded).toEqual([['loaded'], ['loaded']]);
+  expect(external).toEqual([]);
 });
 
 test('a failed first installation does not advertise offline readiness', async ({

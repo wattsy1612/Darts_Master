@@ -1,3 +1,4 @@
+import { mapProfileLinks } from '../domain/participants';
 import { matchId } from '../domain/archive';
 import { readPlayers } from '../domain/players';
 import { replay, isTerminal } from '../domain/match';
@@ -28,8 +29,12 @@ export type ImportPlan = {
 };
 function legacyId(session: Session): string {
   let hash = 2166136261;
-  for (const c of sessionContent(session))
-    hash = Math.imul(hash ^ c.charCodeAt(0), 16777619);
+  const { playerIds: _, ...legacySetup } = session.setup;
+  const content =
+    session.version < 5
+      ? JSON.stringify({ setup: legacySetup, commands: session.commands })
+      : sessionContent(session);
+  for (const c of content) hash = Math.imul(hash ^ c.charCodeAt(0), 16777619);
   return `legacy-${(hash >>> 0).toString(16)}`;
 }
 function sessionWithId(input: unknown): Session {
@@ -72,7 +77,9 @@ export function inspectBackup(text: string): IncomingBackup {
   if (input.format === 'darts-master-match') {
     const current = sessionWithId(input.session);
     // A stand-alone match file does not establish ownership of saved profiles.
-    current.setup = { ...current.setup, playerIds: undefined };
+    current.setup = current.setup.sides
+      ? mapProfileLinks(current.setup, () => null)
+      : { ...current.setup, playerIds: undefined };
     const completed = isTerminal(replay(current));
     return {
       createdAt: now,
@@ -239,15 +246,11 @@ export function buildImportPlan(
     });
   }
   function linkedSession(session: Session): Session {
-    const ids = session.setup.playerIds?.map((id) =>
-      id ? (map.get(id) ?? null) : null,
-    ) as [string | null, string | null] | undefined;
     return {
       ...structuredClone(session),
-      setup: {
-        ...structuredClone(session.setup),
-        ...(ids ? { playerIds: ids } : {}),
-      },
+      setup: mapProfileLinks(structuredClone(session.setup), (id) =>
+        id ? (map.get(id) ?? null) : null,
+      ),
       imported: { sourceId: session.id!, importedAt: new Date().toISOString() },
     };
   }
@@ -314,6 +317,17 @@ export function buildImportPlan(
     errors.push(
       'Too many saved import links. Export your data before requesting a storage migration.',
     );
+  if (!errors.length) {
+    try {
+      validateData(data);
+    } catch (error) {
+      errors.push(
+        error instanceof Error
+          ? error.message
+          : 'The linked roster is invalid.',
+      );
+    }
+  }
   return {
     data,
     addedMatches,

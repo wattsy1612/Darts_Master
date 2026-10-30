@@ -187,7 +187,7 @@ describe('replayable match lifecycle', () => {
     const before = structuredClone(ended),
       next = rematch(ended, 'fresh', 1);
     expect(next).toMatchObject({
-      version: 4,
+      version: 5,
       id: 'fresh',
       commands: [],
       setup: { ...ended.setup, starter: 1 },
@@ -211,7 +211,7 @@ describe('replayable match lifecycle', () => {
       ).toThrow(/version 3/);
     expect(() =>
       normaliseSession({ ...base, commands: [{ type: 'concede', player: 2 }] }),
-    ).toThrow(/which player/);
+    ).toThrow(/conceding/);
     expect(() =>
       normaliseSession({ ...base, commands: [{ type: 'concede' }] }),
     ).toThrow();

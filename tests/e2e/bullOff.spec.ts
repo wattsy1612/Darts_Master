@@ -53,7 +53,7 @@ test('bull-off ties reverse order, survive refresh, and give the match to the de
     )
     .toBe(4);
   const saved = (await readWorkspace(page))!.data.current!;
-  expect(saved.version).toBe(4);
+  expect(saved.version).toBe(5);
   expect(saved.commands.every((c) => c.type === 'bull-throw')).toBe(true);
   await page.getByRole('button', { name: 'Undo last action' }).click();
   await expect(bull.getByRole('heading')).toHaveText(

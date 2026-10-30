@@ -3,7 +3,9 @@ import MatchHistory from './MatchHistory';
 import DartboardEntry from './DartboardEntry';
 import { dartLabel } from './domain/darts';
 import { botVisit, difficulties } from './domain/bot';
-import PlayerProfiles, { PlayerField } from './PlayerProfiles';
+import PlayerProfiles from './PlayerProfiles';
+import SideSetup from './SideSetup';
+import { changeFormat, getSides, rosterView } from './domain/participants';
 import { usePlayers } from './usePlayers';
 import { useRoute } from './useRoute';
 import ActionButton from './ui/ActionButton';
@@ -25,6 +27,8 @@ import {
   formatSummary,
   isTerminal,
   bullPending,
+  bullNames,
+  currentThrower,
   rematch,
   createMatch,
   playerStats,
@@ -83,7 +87,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     savedArchive.matches,
   );
   const [archiveError, setArchiveError] = useState(savedArchive.warning);
-  const [rematchStarter, setRematchStarter] = useState<0 | 1 | null>(null);
+  const [rematchStarter, setRematchStarter] = useState<number | null>(null);
   const [redoGroups, setRedoGroups] = useState<Command[][]>([]);
   const [botPaused, setBotPaused] = useState(() => {
     try {
@@ -237,6 +241,22 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
 
   function append(command: Command) {
     if (!session) return;
+    if (session.version === 5 && match) {
+      if (command.type === 'visit')
+        command = {
+          ...command,
+          visit: {
+            ...command.visit,
+            participantId:
+              command.visit.participantId ?? currentThrower(match).id,
+          },
+        };
+      if (command.type === 'concede')
+        command = {
+          ...command,
+          sideId: command.sideId ?? match.sides[command.player]?.id,
+        };
+    }
     const next: Session = {
       ...session,
       version:
@@ -253,7 +273,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
       const last = result.visits.at(-1);
       setAnnouncement(
         command.type === 'bull-throw'
-          ? `${result.setup.players[command.player]} bull-off dart recorded.`
+          ? `${bullNames(result)[command.player]} bull-off dart recorded.`
           : command.type === 'bull-closest' || command.type === 'bull-rethrow'
             ? 'Bull-off decision recorded.'
             : command.type === 'pause'
@@ -263,11 +283,13 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                 : command.type === 'abandon'
                   ? 'Match abandoned. No winner awarded.'
                   : command.type === 'concede'
-                    ? `${result.setup.players[command.player]} conceded the match.`
+                    ? result.sides.length > 2
+                      ? `${result.setup.players[command.player]} withdrew. ${result.winner === null ? 'Remaining players continue.' : `${result.setup.players[result.winner]} wins by concession.`}`
+                      : `${result.setup.players[command.player]} conceded the match.`
                     : command.type === 'next-leg'
-                      ? `${result.setup.setsToWin ? `Set ${result.set}. ` : ''}Leg ${result.leg}. ${result.setup.players[result.turn]} throws first.`
+                      ? `${result.setup.setsToWin ? `Set ${result.set}. ` : ''}Leg ${result.leg}. ${currentThrower(result).name} throws first.`
                       : last
-                        ? `${result.setup.players[last.player]}: ${last.bust ? 'bust. Score unchanged.' : last.checkout ? `${last.total}. Game shot!` : `${last.total} scored. ${result.scores[last.player]} remaining.`}`
+                        ? `${last.throwerName}: ${last.bust ? 'bust. Score unchanged.' : last.checkout ? `${last.total}. Game shot!` : `${last.total} scored. ${result.scores[last.player]} remaining.`}`
                         : '',
       );
       setRedoGroups([]);
@@ -284,7 +306,9 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     const discards = hasDraft(visitDraft.value) || !!visitDraft.recovery;
     const message =
       command.type === 'concede'
-        ? `${match!.setup.players[command.player]} concedes this match. The opponent receives the match win; no unplayed legs are awarded.`
+        ? match!.sides.length > 2
+          ? `${match!.setup.players[command.player]} withdraws. Remaining players continue; the last remaining side wins. No unplayed legs are awarded.`
+          : `${match!.setup.players[command.player]} concedes this match. The opponent receives the match win; no unplayed legs are awarded.`
         : command.type === 'abandon'
           ? 'Abandon this match with no winner? The played scores stay in history and do not count toward win/loss records.'
           : 'Pause this match?';
@@ -305,13 +329,9 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     const next = rematch(
       session,
       matchId(),
-      rematchStarter ?? ((1 - (match.setup.starter ?? 0)) as 0 | 1),
+      rematchStarter ?? ((match.setup.starter ?? 0) + 1) % match.sides.length,
     );
-    next.setup.players = next.setup.players.map(
-      (name, i) =>
-        playerStore.players.find((p) => p.id === next.setup.playerIds?.[i])
-          ?.name ?? name,
-    ) as [string, string];
+    next.setup = resolveNames(next.setup, false);
     setSession(next);
     setSetup(next.setup);
     setRedoGroups([]);
@@ -320,7 +340,24 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     setError('');
     setAnnouncement('Rematch started.');
   }
-
+  function resolveNames(settings: Setup, requireKnownProfiles = true): Setup {
+    const sides = getSides(settings).map((s) => ({
+      ...s,
+      members: s.members.map((m) => {
+        if (!m.profileId) return m;
+        const profile = playerStore.players.find((p) => p.id === m.profileId);
+        if (!profile) {
+          if (requireKnownProfiles)
+            throw new Error(
+              'Select an available saved player, or choose Guest.',
+            );
+          return m;
+        }
+        return { ...m, name: profile.name };
+      }),
+    }));
+    return rosterView(settings, sides);
+  }
   function submit() {
     if (!score || entryBlocked) return;
     append({
@@ -438,17 +475,9 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
         throw new Error(
           'Confirm that you want to replace this match, or go back to continue or export it.',
         );
-      const linkedNames = setup.players.map((name, index) => {
-        const id = setup.playerIds?.[index];
-        if (!id) return name;
-        const player = playerStore.players.find((p) => p.id === id);
-        if (!player)
-          throw new Error('Select an available saved player, or choose Guest.');
-        return player.name;
-      }) as [string, string];
-      const checked = createMatch({ ...setup, players: linkedNames });
+      const checked = createMatch(resolveNames(setup));
       setSession({
-        version: 4,
+        version: 5,
         id: matchId(),
         setup: checked.setup,
         commands: [],
@@ -524,7 +553,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.11</span>
+          Development build <span>v0.12</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -729,7 +758,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                 <p className="muted">
                   {setup.bot
                     ? 'Practice against a simulated opponent using your chosen match rules.'
-                    : 'Two players at one board. Choose the rules for your match.'}
+                    : 'Players and sides at one board. Choose your roster and match rules.'}
                 </p>
                 <form onSubmit={start}>
                   <div
@@ -740,33 +769,57 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                     <button
                       type="button"
                       aria-pressed={!setup.bot}
-                      onClick={() =>
-                        setSetup({
-                          ...setup,
-                          bot: undefined,
-                          players: [
-                            setup.players[0],
-                            setup.players[1] === 'Practice Bot'
-                              ? 'Player 2'
-                              : setup.players[1],
-                          ],
-                        })
-                      }
+                      onClick={() => {
+                        const sides = setup.sides ?? getSides(setup);
+                        const human = sides.map((s, i) => ({
+                          ...s,
+                          members: s.members.map((m) =>
+                            i === 1 && setup.bot
+                              ? { ...m, name: 'Player 2', profileId: null }
+                              : m,
+                          ),
+                        }));
+                        setSetup(
+                          rosterView({ ...setup, bot: undefined }, human),
+                        );
+                      }}
                     >
                       <strong>Local match</strong>
-                      <span>Two players at one board</span>
+                      <span>Players or sides at one board</span>
                     </button>
                     <button
                       type="button"
                       aria-pressed={!!setup.bot}
-                      onClick={() =>
-                        setSetup({
-                          ...setup,
-                          bot: setup.bot ?? 'regular',
-                          players: [setup.players[0], 'Practice Bot'],
-                          playerIds: [setup.playerIds?.[0] ?? null, null],
-                        })
-                      }
+                      onClick={() => {
+                        const single = changeFormat(setup, 'singles');
+                        const sides = single.sides!.map((s, i) =>
+                          i === 1
+                            ? {
+                                ...s,
+                                name: 'Practice Bot',
+                                members: [
+                                  {
+                                    ...s.members[0],
+                                    name: 'Practice Bot',
+                                    profileId: null,
+                                  },
+                                ],
+                              }
+                            : s,
+                        );
+                        setSetup(
+                          rosterView(
+                            {
+                              ...single,
+                              bot: setup.bot ?? 'regular',
+                              startMethod: undefined,
+                              starter: 0,
+                              startingSideId: sides[0].id,
+                            },
+                            sides,
+                          ),
+                        );
+                      }}
                     >
                       <strong>Practice opponent</strong>
                       <span>Play a simulated opponent</span>
@@ -794,62 +847,12 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                     </div>
                   )}
                   <div className="form-grid">
-                    {setup.players.map((name, index) => (
-                      <PlayerField
-                        key={index}
-                        index={index}
-                        name={name}
-                        bot={index === 1 && !!setup.bot}
-                        profileId={setup.playerIds?.[index] ?? null}
-                        players={playerStore.players}
-                        onName={(name) =>
-                          setSetup({
-                            ...setup,
-                            players: setup.players.map((p, i) =>
-                              i === index ? name : p,
-                            ) as [string, string],
-                          })
-                        }
-                        onSelect={(id) => {
-                          const ids: [string | null, string | null] = [
-                            ...(setup.playerIds ?? [null, null]),
-                          ];
-                          ids[index] = id || null;
-                          const player = playerStore.players.find(
-                            (p) => p.id === id,
-                          );
-                          setSetup({
-                            ...setup,
-                            playerIds: ids,
-                            players: setup.players.map((p, i) =>
-                              i === index && player ? player.name : p,
-                            ) as [string, string],
-                          });
-                        }}
-                        onSave={async () => {
-                          const player = await playerStore.add(name);
-                          if (!player) return;
-                          setSetup((previous) => {
-                            if (
-                              previous.players[index] !== name ||
-                              (index === 1 && previous.bot)
-                            )
-                              return previous;
-                            const ids: [string | null, string | null] = [
-                              ...(previous.playerIds ?? [null, null]),
-                            ];
-                            ids[index] = player.id;
-                            return {
-                              ...previous,
-                              playerIds: ids,
-                              players: previous.players.map((p, i) =>
-                                i === index ? player.name : p,
-                              ) as [string, string],
-                            };
-                          });
-                        }}
-                      />
-                    ))}
+                    <SideSetup
+                      setup={setup}
+                      setSetup={setSetup}
+                      players={playerStore.players}
+                      onAdd={playerStore.add}
+                    />
                     <label>
                       Starting score
                       <select
@@ -1018,7 +1021,10 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                         }
                       >
                         <option value="manual">Choose who starts</option>
-                        <option value="bull-off" disabled={!!setup.bot}>
+                        <option
+                          value="bull-off"
+                          disabled={!!setup.bot || setup.players.length !== 2}
+                        >
                           Throw for the bull (two local players)
                         </option>
                       </select>
@@ -1035,23 +1041,26 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                         : 'Throws first'}
                       <select
                         value={setup.starter ?? 0}
-                        onChange={(e) =>
-                          setSetup({
-                            ...setup,
-                            starter: Number(e.target.value) as 0 | 1,
-                          })
-                        }
+                        onChange={(e) => {
+                          const roster = setup.sides ?? getSides(setup),
+                            index = Number(e.target.value);
+                          setSetup(
+                            rosterView(
+                              {
+                                ...setup,
+                                starter: index,
+                                startingSideId: roster[index].id,
+                              },
+                              roster,
+                            ),
+                          );
+                        }}
                       >
-                        <option value={0}>
-                          {playerStore.players.find(
-                            (p) => p.id === setup.playerIds?.[0],
-                          )?.name ?? setup.players[0]}
-                        </option>
-                        <option value={1}>
-                          {playerStore.players.find(
-                            (p) => p.id === setup.playerIds?.[1],
-                          )?.name ?? setup.players[1]}
-                        </option>
+                        {setup.players.map((name, i) => (
+                          <option key={i} value={i}>
+                            {name}
+                          </option>
+                        ))}
                       </select>
                     </label>
                   </div>
@@ -1153,15 +1162,20 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                               <button
                                 key={i}
                                 className="text-button"
-                                disabled={visitDraft.loading}
+                                disabled={
+                                  visitDraft.loading || match.withdrawn[i]
+                                }
                                 onClick={() =>
                                   control({
                                     type: 'concede',
-                                    player: i as 0 | 1,
+                                    player: i,
                                   })
                                 }
                               >
-                                {name} concedes
+                                {name}{' '}
+                                {match.sides.length > 2
+                                  ? 'withdraws'
+                                  : 'concedes'}
                               </button>
                             ))}
                             <button
@@ -1180,10 +1194,12 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                           Rematch first thrower
                           <select
                             value={
-                              rematchStarter ?? 1 - (match.setup.starter ?? 0)
+                              rematchStarter ??
+                              ((match.setup.starter ?? 0) + 1) %
+                                match.sides.length
                             }
                             onChange={(e) =>
-                              setRematchStarter(Number(e.target.value) as 0 | 1)
+                              setRematchStarter(Number(e.target.value))
                             }
                           >
                             {match.setup.players.map((name, i) => (
@@ -1212,7 +1228,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                     (match.bullOff.winner === null ? (
                       <BullOffPanel
                         state={match.bullOff}
-                        players={match.setup.players}
+                        players={bullNames(match)}
                         enabled={match.status === 'active'}
                         onCommand={append}
                         onUndo={undo}
@@ -1229,7 +1245,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                         </summary>
                         <BullOffPanel
                           state={match.bullOff}
-                          players={match.setup.players}
+                          players={bullNames(match)}
                         />
                       </details>
                     ))}
@@ -1264,7 +1280,9 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                         className={`board ${match.legWinner !== null ? 'completed' : ''}`}
                         aria-label="Scoreboard"
                       >
-                        <div className="players">
+                        <div
+                          className={`players ${match.sides.length > 2 ? 'has-many' : ''}`}
+                        >
                           {match.setup.players.map((name, index) => {
                             const stats = playerStats(match, index);
                             const active =
@@ -1283,10 +1301,21 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                                     {name.charAt(0).toUpperCase()}
                                   </span>
                                   <span>{name}</span>
+                                  {match.withdrawn[index] && (
+                                    <span className="throwing">WITHDRAWN</span>
+                                  )}
                                   {active && (
                                     <span className="throwing">THROWING</span>
                                   )}
                                 </div>
+                                {match.sides[index].members.length > 1 && (
+                                  <p className="side-thrower">
+                                    {match.legWinner !== null ||
+                                    isTerminal(match)
+                                      ? `Roster: ${match.sides[index].members.map((m) => m.name).join(', ')}`
+                                      : `${active ? 'At the oche' : 'Next member'}: ${match.sides[index].members[match.memberCursor[index]].name}`}
+                                  </p>
+                                )}
                                 <div className="remaining">
                                   {match.scores[index]}
                                 </div>
@@ -1410,8 +1439,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                                   ))
                                 ) : (
                                   <h2>
-                                    {match.setup.players[match.turn]}, you’re
-                                    up.
+                                    {currentThrower(match).name}, you’re up.
                                   </h2>
                                 )}
                               </div>
@@ -1473,7 +1501,11 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                               .map((visit, index) => (
                                 <div className="recent-visit" key={index}>
                                   <span>
-                                    {match.setup.players[visit.player]}
+                                    {visit.throwerName}
+                                    {match.sides[visit.player].members.length >
+                                    1
+                                      ? ` · ${match.setup.players[visit.player]}`
+                                      : ''}
                                   </span>
                                   <strong>
                                     {visit.bust ? 'BUST' : visit.total}
@@ -1503,6 +1535,15 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                       hidden={match.status !== 'active' || bullInProgress}
                       aria-label="Score entry"
                     >
+                      {match.legWinner === null &&
+                        (match.sides.length > 2 ||
+                          match.sides[match.turn].members.length > 1) && (
+                          <p className="turn-label" role="status">
+                            At the oche:{' '}
+                            <strong>{currentThrower(match).name}</strong> ·{' '}
+                            {match.sides[match.turn].name}
+                          </p>
+                        )}
                       {visitDraft.loading && (
                         <p role="status">Checking this turn’s draft…</p>
                       )}
@@ -1587,7 +1628,11 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                             outRule={rules.outRule}
                             opened={match.opened[match.turn]}
                             remaining={match.scores[match.turn]}
-                            playerName={match.setup.players[match.turn]}
+                            playerName={
+                              match.legWinner === null
+                                ? currentThrower(match).name
+                                : match.visits.at(-1)?.throwerName
+                            }
                             waitingForOpponent={botTurn}
                             disabled={entryBlocked}
                             error={error}
@@ -1771,16 +1816,18 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
               onAdd={playerStore.add}
               onRename={playerStore.rename}
               onPlay={(player) => {
-                setSetup({
-                  ...setup,
-                  players: [player.name, setup.players[1]],
-                  playerIds: [
-                    player.id,
-                    setup.playerIds?.[1] === player.id
-                      ? null
-                      : (setup.playerIds?.[1] ?? null),
-                  ],
-                });
+                const single = changeFormat(setup, 'singles');
+                const sides = single.sides!.map((s, i) => ({
+                  ...s,
+                  members: s.members.map((m) =>
+                    i === 0
+                      ? { ...m, name: player.name, profileId: player.id }
+                      : m.profileId === player.id
+                        ? { ...m, profileId: null }
+                        : m,
+                  ),
+                }));
+                setSetup(rosterView(single, sides));
                 setReplaceConfirmed(false);
                 setEditing(true);
                 setError('');

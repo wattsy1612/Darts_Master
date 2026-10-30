@@ -1,3 +1,4 @@
+import { rosterFormat } from './participants';
 import { matchId } from './archive';
 import type { ArchivedMatch } from './archive';
 import { replay } from './match';
@@ -75,6 +76,7 @@ export function playerSummary(
   archive: ArchivedMatch[],
   id: string,
   practice: boolean,
+  format: 'singles' | 'multiplayer' | 'team' | 'all' = 'singles',
 ) {
   let matches = 0,
     wins = 0,
@@ -98,15 +100,27 @@ export function playerSummary(
     if (key) seen.add(key);
     if (!!entry.session.setup.bot !== practice) continue;
     const match = replay(entry.session);
-    const index =
-      match.setup.playerIds?.findIndex((playerId) => playerId === id) ?? -1;
+    const mode = rosterFormat(match.setup);
+    if (
+      format !== 'all' &&
+      (format === 'team'
+        ? mode !== 'teams' && mode !== 'pairs'
+        : mode !== format)
+    )
+      continue;
+    const index = match.sides.findIndex((s) =>
+      s.members.some((member) => member.profileId === id),
+    );
     if (index < 0 || (practice && index === 1) || match.winner === null)
       continue;
     matches++;
     if (match.winner === index) wins++;
     legsWon += match.legs[index];
-    legsLost += match.legs[1 - index];
-    for (const visit of match.visits.filter((v) => v.player === index)) {
+    legsLost += match.legs.reduce(
+      (n, value, i) => (i === index ? n : n + value),
+      0,
+    );
+    for (const visit of match.visits.filter((v) => v.profileId === id)) {
       darts += visit.darts;
       if (!visit.bust) {
         scored += visit.total;
@@ -118,11 +132,21 @@ export function playerSummary(
     }
     if (recent.length < 3)
       recent.push({
-        opponent: match.setup.players[1 - index],
+        opponent: match.sides
+          .filter((_, i) => i !== index)
+          .map((s) => s.name)
+          .join(', '),
         won: match.winner === index,
-        score: match.setup.setsToWin
-          ? `${match.sets[index]}–${match.sets[1 - index]} sets${match.status === 'conceded' ? ' · concession' : ''}`
-          : `${match.legs[index]}–${match.legs[1 - index]}${match.status === 'conceded' ? ' · concession' : ''}`,
+        score:
+          [index, ...match.sides.map((_, i) => i).filter((i) => i !== index)]
+            .map((i) => (match.setup.setsToWin ? match.sets[i] : match.legs[i]))
+            .join('–') +
+          (match.setup.setsToWin ? ' sets' : '') +
+          (match.withdrawn[index]
+            ? ' · concession'
+            : match.status === 'conceded'
+              ? ' · concession'
+              : ''),
         date: entry.completedAt,
       });
   }

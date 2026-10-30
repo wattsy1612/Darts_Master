@@ -37,7 +37,7 @@ export function normaliseSession(value: unknown): Session {
   const input = value as Session;
   if (
     !input ||
-    ![1, 2, 3, 4].includes(input.version) ||
+    ![1, 2, 3, 4, 5].includes(input.version) ||
     !Array.isArray(input.commands) ||
     input.commands.length > 10000
   )
@@ -59,6 +59,12 @@ export function normaliseSession(value: unknown): Session {
     setup.starterPolicy = settings.starterPolicy;
   if (settings.startMethod !== undefined)
     setup.startMethod = settings.startMethod;
+  if (settings.startingSideId !== undefined)
+    setup.startingSideId = settings.startingSideId;
+  if (settings.sides !== undefined) setup.sides = settings.sides;
+  if (settings.format !== undefined) setup.format = settings.format;
+  if (settings.memberRotation !== undefined)
+    setup.memberRotation = settings.memberRotation;
   const checked = createMatch(setup).setup;
   const commands: Command[] = input.commands.map((command) => {
     if (command?.type === 'bull-throw')
@@ -74,7 +80,11 @@ export function normaliseSession(value: unknown): Session {
     )
       return { type: command.type };
     if (command?.type === 'concede')
-      return { type: 'concede', player: command.player };
+      return {
+        type: 'concede',
+        player: command.player,
+        ...(command.sideId !== undefined ? { sideId: command.sideId } : {}),
+      };
     if (command?.type !== 'visit' || !command.visit)
       throw new Error('The match contains an unknown action.');
     const v = command.visit;
@@ -90,6 +100,9 @@ export function normaliseSession(value: unknown): Session {
         total: v.total,
         darts: v.darts,
         double: v.double,
+        ...(v.participantId !== undefined
+          ? { participantId: v.participantId }
+          : {}),
         ...(v.opens !== undefined ? { opens: v.opens } : {}),
         ...(v.hits !== undefined
           ? {
@@ -129,7 +142,33 @@ export function normaliseSession(value: unknown): Session {
 }
 export function sessionContent(session: Session): string {
   const { playerIds: _, ...setup } = session.setup;
-  return JSON.stringify({ setup, commands: session.commands });
+  return JSON.stringify(
+    stableContent({
+      setup: {
+        ...setup,
+        ...(setup.sides
+          ? {
+              sides: setup.sides.map((s) => ({
+                ...s,
+                members: s.members.map(({ profileId: _, ...member }) => member),
+              })),
+            }
+          : {}),
+      },
+      commands: session.commands,
+    }),
+  );
+}
+function stableContent(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableContent);
+  if (value && typeof value === 'object')
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, v]) => v !== undefined)
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+        .map(([key, v]) => [key, stableContent(v)]),
+    );
+  return value;
 }
 export function validateData(value: unknown): WorkspaceData {
   const input = value as WorkspaceData;

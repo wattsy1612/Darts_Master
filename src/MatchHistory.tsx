@@ -3,7 +3,14 @@ import BullOffPanel from './BullOffPanel';
 import { dartLabel } from './domain/darts';
 import { difficulties } from './domain/bot';
 import { ruleSummary } from './domain/x01';
-import { playerStats, replay, formatSummary, isTerminal } from './domain/match';
+import {
+  playerStats,
+  replay,
+  formatSummary,
+  isTerminal,
+  bullNames,
+  participantStats,
+} from './domain/match';
 import type { Session } from './domain/match';
 import { exportMatch } from './domain/archive';
 import type { ArchivedMatch } from './domain/archive';
@@ -91,9 +98,7 @@ export default function MatchHistory({
                     : `${match.setup.players[match.winner]} wins${match.status === 'conceded' ? ' by concession' : ''}`}
               </h2>
               <div className="result-score">
-                {match.setup.setsToWin ? match.sets[0] : match.legs[0]}{' '}
-                <span>—</span>{' '}
-                {match.setup.setsToWin ? match.sets[1] : match.legs[1]}{' '}
+                {(match.setup.setsToWin ? match.sets : match.legs).join(' — ')}{' '}
                 {match.setup.setsToWin && <small>sets</small>}
               </div>
               <p>
@@ -170,7 +175,7 @@ export default function MatchHistory({
                             : c.type === 'abandon'
                               ? 'Match abandoned without a winner'
                               : c.type === 'concede'
-                                ? `${match.setup.players[c.player]} conceded`
+                                ? `${match.setup.players[c.player]} ${match.sides.length > 2 ? 'withdrew' : 'conceded'}`
                                 : ''}
                       </li>
                     ))}
@@ -178,10 +183,30 @@ export default function MatchHistory({
               </section>
             )}
             {match.bullOff && (
-              <BullOffPanel
-                state={match.bullOff}
-                players={match.setup.players}
-              />
+              <BullOffPanel state={match.bullOff} players={bullNames(match)} />
+            )}
+            {match.sides.some((s) => s.members.length > 1) && (
+              <section aria-label="Individual thrower records">
+                <h2>Individual throwers</h2>
+                <div className="comparison-grid">
+                  {match.sides.flatMap((side) =>
+                    side.members.map((member) => {
+                      const stats = participantStats(match, member.id);
+                      return (
+                        <article className="summary-player" key={member.id}>
+                          <h3>
+                            {member.name} · {side.name}
+                          </h3>
+                          <p>
+                            {stats.darts} darts · 3-dart average {stats.average}{' '}
+                            · Best visit {stats.best || '—'}
+                          </p>
+                        </article>
+                      );
+                    }),
+                  )}
+                </div>
+              </section>
             )}
             <h2>Visit by visit</h2>
             {match.visits.length ? (
@@ -192,7 +217,14 @@ export default function MatchHistory({
                       <th>Visit</th>
                       {match.setup.setsToWin && <th>Set</th>}
                       <th>Leg</th>
-                      <th>Player</th>
+                      <th>
+                        {match.sides.some((s) => s.members.length > 1)
+                          ? 'Side'
+                          : 'Player'}
+                      </th>
+                      {match.sides.some((s) => s.members.length > 1) && (
+                        <th>Thrower</th>
+                      )}
                       <th>Score</th>
                       <th>Darts</th>
                       <th>Result</th>
@@ -205,6 +237,9 @@ export default function MatchHistory({
                         {match.setup.setsToWin && <td>{v.set}</td>}
                         <td>{v.leg}</td>
                         <td>{match.setup.players[v.player]}</td>
+                        {match.sides.some((s) => s.members.length > 1) && (
+                          <td>{v.throwerName}</td>
+                        )}
                         <td>
                           {v.total}
                           {v.hits && (
