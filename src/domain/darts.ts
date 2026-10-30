@@ -1,3 +1,5 @@
+import { rulesFor } from './x01';
+import type { X01Rules } from './x01';
 export type DartHit = { number: number; multiplier: 1 | 2 | 3 };
 export function dartValue(hit: DartHit): number {
   if (
@@ -19,10 +21,17 @@ export function dartLabel(hit: DartHit): string {
   if (hit.number === 25) return hit.multiplier === 2 ? 'Bull' : '25';
   return `${['', 'S', 'D', 'T'][hit.multiplier]}${hit.number}`;
 }
-export function evaluateDarts(start: number, hits: DartHit[]) {
+export function evaluateDarts(
+  start: number,
+  hits: DartHit[],
+  options: X01Rules & { opened?: boolean } = {},
+) {
+  const rules = rulesFor(options);
+  const wasOpen = rules.inRule === 'straight' || options.opened === true;
+  let opened = wasOpen;
   if (
     !Number.isInteger(start) ||
-    start < 2 ||
+    start < (rules.outRule === 'straight' ? 1 : 2) ||
     !Array.isArray(hits) ||
     hits.length > 3
   )
@@ -36,12 +45,14 @@ export function evaluateDarts(start: number, hits: DartHit[]) {
       throw new Error(
         'The visit ended before this dart. Remove the extra dart.',
       );
-    total += dartValue(hit);
+    const value = dartValue(hit);
+    if (!opened && hit.multiplier === 2) opened = true;
+    if (opened) total += value;
     const remaining = start - total;
     if (
       remaining < 0 ||
-      remaining === 1 ||
-      (remaining === 0 && hit.multiplier !== 2)
+      (rules.outRule === 'double' && remaining === 1) ||
+      (remaining === 0 && rules.outRule === 'double' && hit.multiplier !== 2)
     )
       status = 'bust';
     else if (remaining === 0) status = 'checkout';
@@ -49,7 +60,9 @@ export function evaluateDarts(start: number, hits: DartHit[]) {
   return {
     total,
     darts: hits.length,
-    double: status === 'checkout',
+    double: status === 'checkout' && hits.at(-1)?.multiplier === 2,
+    opens: !wasOpen && opened,
+    opened: status === 'bust' ? wasOpen : opened,
     remaining: status === 'bust' ? start : start - total,
     status,
   };

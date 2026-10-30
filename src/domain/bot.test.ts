@@ -101,3 +101,33 @@ it('can finish and win a match using the same checkout rules', () => {
   expect(winner?.winner).toBe(1);
   expect(winner?.visits.at(-1)?.checkout).toBe(true);
 });
+
+it('uses the selected opening and finishing rules for simulated darts', () => {
+  for (const inRule of ['straight', 'double'] as const)
+    for (const outRule of ['straight', 'double'] as const) {
+      for (const opened of [false, true])
+        for (let seed = 0; seed < 50; seed++) {
+          let match = createMatch({
+            players: ['Player', 'Bot'],
+            start: 101,
+            legsToWin: 1,
+            bot: 'regular',
+            starter: 1,
+            inRule,
+            outRule,
+          });
+          if (inRule === 'straight' && !opened) continue;
+          match = {
+            ...match,
+            opened: [match.opened[0], opened],
+            scores: [101, opened ? (outRule === 'straight' ? 1 : 21) : 101],
+          };
+          const visit = botVisit(match, `variant-${seed}`);
+          const next = recordVisit(match, visit);
+          expect(next.scores[1]).toBeGreaterThanOrEqual(0);
+          if (outRule === 'double') expect(next.scores[1]).not.toBe(1);
+          expect(visit.hits).toHaveLength(visit.darts);
+          expect(botVisit(match, `variant-${seed}`)).toEqual(visit);
+        }
+    }
+});

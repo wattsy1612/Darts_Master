@@ -24,7 +24,9 @@ Open **http://localhost:5173** in a browser on the Dell. When working from anoth
 
 ## Available now
 
-- Two-player 301, 501 and 701, with a configurable number of legs to win.
+- Two-player X01 with 301/501/701/1001 presets and custom whole-number starts from 101 to 1001.
+- Straight/double opening and finishing rules, with shared board/keypad validation.
+- Legs or sets, separate set/leg totals, and selectable leg/set starter rotation.
 - Saved browser-local player profiles, reusable at setup and renameable without losing result links.
 - Player records with wins/losses, leg totals, weighted scoring averages, 180s, highest checkout and recent results.
 - Separate player-versus-player and practice statistics, based on completed matches linked to a profile.
@@ -33,10 +35,10 @@ Open **http://localhost:5173** in a browser on the Dell. When working from anoth
 - Practice undo/redo corrects your visit and the opponent reply together.
 - Interactive dartboard entry: tap singles, doubles, trebles and either bull.
 - Three-dart previews, hit markers, miss/bounce-out entry and draft correction.
-- Automatic early bust and double-out detection from the actual dart sequence.
+- Automatic opening, early bust and finish detection from the actual dart sequence.
 - Larger number buttons for precision entry on phones, plus optional keypad/keyboard visit totals.
 - Checkout suggestions recalculate for the score and darts left in a board-entered visit.
-- Double-out rules, including bull finishes, busts and impossible-score validation.
+- Rule-aware finishes, bull opening/checkout, busts and impossible-score validation.
 - Checkout suggestions, three-dart averages, best visits and alternating leg starts.
 - Undo and redo for scoring and starting the next leg, with clear score feedback.
 - A visit log and automatic recovery of the current match after refreshing.
@@ -51,7 +53,9 @@ Open **http://localhost:5173** in a browser on the Dell. When working from anoth
 
 Board entry is the default for new installations; use the **Dartboard / Keypad** switch to choose and save your preferred input method. Board visits are recorded only after confirmation, so you can correct a misplaced tap first. Unsubmitted board darts and keypad details are saved separately for this tab. On refresh, a matching draft is offered for explicit restore or discard; it never records a visit by itself. Drafts expire after seven days and are excluded from full match backups. Closing a tab may remove its draft link, so record a visit before closing it.
 
-Practice opponents generate individual darts with different hit/miss probabilities; difficulty names are not guaranteed averages or ratings. They follow the same bust and double-out rules as human players. Opponent throws pause while viewing history or editing setup. Saved match positions produce repeatable opponent throws, so refresh and correction do not reroll a score.
+Double-in keypad visits require an explicit opening declaration and include only points scored from the opening double onwards; count every dart thrown. Board entry calculates this automatically. A bust cancels the entire visit, including an opening double. Straight out allows one remaining and a finish on any segment. Sets use first-to targets without win-by-two/tie-break rules. Older v1 games retain their original straight-in/double-out legs rules; new games use v2 session data, which older app versions must reject.
+
+Practice opponents follow the chosen match rules and generate individual darts with different hit/miss probabilities; difficulty names are not guaranteed averages or ratings. They follow the same opening, bust and finishing rules as human players. Opponent throws pause while viewing history or editing setup. Saved match positions produce repeatable opponent throws, so refresh and correction do not reroll a score.
 
 Saved players are local profiles, not registered accounts. Select a saved player before starting a game to link that result; guest matches are not automatically attached by matching names. Profile statistics use the latest 100 completed matches retained in this browser.
 

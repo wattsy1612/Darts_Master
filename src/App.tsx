@@ -12,6 +12,7 @@ import DataManager from './DataManager';
 import { useVisitDraft } from './useVisitDraft';
 import { OfflineIndicator } from './OfflineSupport';
 import { turnIdentity } from './data/draft';
+import { ruleSummary, rulesFor } from './domain/x01';
 import { browserRepository } from './data/repository';
 import type { LocalRepository } from './data/repository';
 import { matchId, readArchive, updateArchive } from './domain/archive';
@@ -19,6 +20,7 @@ import type { ArchivedMatch } from './domain/archive';
 import type { Command, Session, Setup } from './domain/match';
 import {
   checkoutRoute,
+  formatSummary,
   createMatch,
   playerStats,
   replay,
@@ -69,6 +71,9 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
   const [setup, setSetup] = useState<Setup>(
     saved.session?.setup ?? initialSetup,
   );
+  const [customStart, setCustomStart] = useState(
+    ![301, 501, 701, 1001].includes(setup.start),
+  );
   const [archives, setArchives] = useState<ArchivedMatch[]>(
     savedArchive.matches,
   );
@@ -115,6 +120,8 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
       repository.mode === 'database',
   );
   const { score, darts, double } = visitDraft.value;
+  const opens = visitDraft.value.opens ?? false;
+  const rules = rulesFor(match?.setup ?? setup);
   const setScore = (score: string) =>
     visitDraft.update({ score, mode: entryMode });
   const setDarts = (darts: number) =>
@@ -155,7 +162,14 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     botTurn ||
     visitDraft.loading ||
     !!visitDraft.recovery;
-  const route = match ? checkoutRoute(match.scores[match.turn]) : null;
+  const route = match
+    ? checkoutRoute(
+        match.scores[match.turn],
+        3,
+        rules.outRule,
+        !match.opened[match.turn],
+      )
+    : null;
   const resultSaved =
     !!session && archives.some((entry) => entry.session.id === session.id);
   const replacementNeedsConfirmation =
@@ -215,7 +229,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
       const last = result.visits.at(-1);
       setAnnouncement(
         command.type === 'next-leg'
-          ? `Leg ${result.leg}. ${result.setup.players[result.turn]} throws first.`
+          ? `${result.setup.setsToWin ? `Set ${result.set}. ` : ''}Leg ${result.leg}. ${result.setup.players[result.turn]} throws first.`
           : last
             ? `${result.setup.players[last.player]}: ${last.bust ? 'bust. Score unchanged.' : last.checkout ? `${last.total}. Game shot!` : `${last.total} scored. ${result.scores[last.player]} remaining.`}`
             : '',
@@ -234,7 +248,12 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
     if (!score || entryBlocked) return;
     append({
       type: 'visit',
-      visit: { total: Number(score), darts, double: finishing && double },
+      visit: {
+        total: Number(score),
+        darts,
+        double: finishing && rules.outRule === 'double' && double,
+        ...(!match!.opened[match!.turn] ? { opens } : {}),
+      },
     });
   }
   function input(value: string) {
@@ -352,7 +371,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
       }) as [string, string];
       const checked = createMatch({ ...setup, players: linkedNames });
       setSession({
-        version: 1,
+        version: 2,
         id: matchId(),
         setup: checked.setup,
         commands: [],
@@ -428,7 +447,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.8</span>
+          Development build <span>v0.9</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -628,8 +647,8 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                 <h2>Who’s at the board?</h2>
                 <p className="muted">
                   {setup.bot
-                    ? 'Practice against a simulated opponent. Double out.'
-                    : 'Two players. Alternate starts. Double out.'}
+                    ? 'Practice against a simulated opponent using your chosen match rules.'
+                    : 'Two players at one board. Choose the rules for your match.'}
                 </p>
                 <form onSubmit={start}>
                   <div
@@ -753,18 +772,121 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                     <label>
                       Starting score
                       <select
-                        value={setup.start}
-                        onChange={(e) =>
-                          setSetup({ ...setup, start: Number(e.target.value) })
-                        }
+                        value={customStart ? 'custom' : setup.start}
+                        onChange={(e) => {
+                          setCustomStart(e.target.value === 'custom');
+                          if (e.target.value !== 'custom')
+                            setSetup({
+                              ...setup,
+                              start: Number(e.target.value),
+                            });
+                        }}
                       >
-                        {[301, 501, 701].map((n) => (
+                        {[301, 501, 701, 1001].map((n) => (
                           <option key={n}>{n}</option>
                         ))}
+                        <option value="custom">Custom score</option>
+                      </select>
+                    </label>
+                    {customStart && (
+                      <label>
+                        Custom starting score
+                        <input
+                          type="number"
+                          min="101"
+                          max="1001"
+                          step="1"
+                          required
+                          value={setup.start || ''}
+                          onChange={(e) =>
+                            setSetup({
+                              ...setup,
+                              start: Number(e.target.value),
+                            })
+                          }
+                        />
+                      </label>
+                    )}
+                    <label>
+                      Opening rule
+                      <select
+                        value={setup.inRule ?? 'straight'}
+                        onChange={(e) =>
+                          setSetup({
+                            ...setup,
+                            inRule: e.target.value as 'straight' | 'double',
+                          })
+                        }
+                      >
+                        <option value="straight">
+                          Straight in — every dart scores
+                        </option>
+                        <option value="double">
+                          Double in — double to start
+                        </option>
                       </select>
                     </label>
                     <label>
-                      First to
+                      Finishing rule
+                      <select
+                        value={setup.outRule ?? 'double'}
+                        onChange={(e) =>
+                          setSetup({
+                            ...setup,
+                            outRule: e.target.value as 'straight' | 'double',
+                          })
+                        }
+                      >
+                        <option value="double">
+                          Double out — double to finish
+                        </option>
+                        <option value="straight">
+                          Straight out — any segment to zero
+                        </option>
+                      </select>
+                    </label>
+                    <label>
+                      Match format
+                      <select
+                        value={setup.setsToWin ? 'sets' : 'legs'}
+                        onChange={(e) =>
+                          setSetup({
+                            ...setup,
+                            setsToWin:
+                              e.target.value === 'sets' ? 1 : undefined,
+                            starterPolicy:
+                              e.target.value === 'sets'
+                                ? 'alternate-sets'
+                                : undefined,
+                          })
+                        }
+                      >
+                        <option value="legs">Legs</option>
+                        <option value="sets">Sets</option>
+                      </select>
+                    </label>
+                    {setup.setsToWin && (
+                      <label>
+                        Sets to win
+                        <select
+                          value={setup.setsToWin}
+                          onChange={(e) =>
+                            setSetup({
+                              ...setup,
+                              setsToWin: Number(e.target.value),
+                            })
+                          }
+                        >
+                          {[1, 2, 3, 4, 5, 7, 9, 11].map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                    <label>
+                      {setup.setsToWin ? 'Legs per set to win' : 'First to'}
                       <select
                         value={setup.legsToWin}
                         onChange={(e) =>
@@ -781,6 +903,28 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                         ))}
                       </select>
                     </label>
+                    {setup.setsToWin && (
+                      <label>
+                        Starting-player rotation
+                        <select
+                          value={setup.starterPolicy ?? 'alternate-legs'}
+                          onChange={(e) =>
+                            setSetup({
+                              ...setup,
+                              starterPolicy: e.target
+                                .value as Setup['starterPolicy'],
+                            })
+                          }
+                        >
+                          <option value="alternate-legs">
+                            Alternate every leg across the match
+                          </option>
+                          <option value="alternate-sets">
+                            Alternate set starters, then legs within each set
+                          </option>
+                        </select>
+                      </label>
+                    )}
                     <label>
                       Throws first
                       <select
@@ -805,6 +949,18 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                       </select>
                     </label>
                   </div>
+                  <p className="rule-explanation">
+                    {ruleSummary(setup)} · {formatSummary(setup)}.{' '}
+                    {setup.inRule === 'double'
+                      ? 'The opening double counts; earlier darts do not. A bust cancels the whole visit, including an opening double. '
+                      : ''}
+                    {setup.outRule === 'straight'
+                      ? 'Leaving one is allowed; reach exactly zero on any segment.'
+                      : 'Leaving one or reaching zero without a double is a bust.'}{' '}
+                    {setup.setsToWin
+                      ? 'No win-by-two or deciding-set tie-break.'
+                      : ''}
+                  </p>
                   {match && (
                     <p className="notice">
                       {match.winner === null
@@ -864,11 +1020,14 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                         {match.setup.bot ? '● PRACTICE MATCH' : '● LIVE MATCH'}
                       </span>
                       <span>
-                        {match.setup.start} · Double out · First to{' '}
-                        {match.setup.legsToWin}
+                        {match.setup.start} · {ruleSummary(match.setup)} ·{' '}
+                        {formatSummary(match.setup)}
                       </span>
                     </div>
-                    <strong>LEG {match.leg.toString().padStart(2, '0')}</strong>
+                    <strong>
+                      {match.setup.setsToWin ? `SET ${match.set} · ` : ''}LEG{' '}
+                      {match.leg.toString().padStart(2, '0')}
+                    </strong>
                   </div>
                   <div
                     className={`play-grid ${entryMode === 'board' ? 'dartboard-mode' : ''}`}
@@ -902,12 +1061,30 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                                   {match.scores[index]}
                                 </div>
                                 <div className="legs">
-                                  <span>LEGS WON</span>
+                                  <span>
+                                    {match.setup.setsToWin
+                                      ? 'SETS WON'
+                                      : 'LEGS WON'}
+                                  </span>
                                   <strong>
-                                    {match.legs[index]}
-                                    <small> / {match.setup.legsToWin}</small>
+                                    {match.setup.setsToWin
+                                      ? match.sets[index]
+                                      : match.legs[index]}
+                                    <small>
+                                      {' '}
+                                      /{' '}
+                                      {match.setup.setsToWin ??
+                                        match.setup.legsToWin}
+                                    </small>
                                   </strong>
                                 </div>
+                                {match.setup.setsToWin && (
+                                  <p className="set-leg-progress">
+                                    {match.setLegs[index]} /{' '}
+                                    {match.setup.legsToWin} legs in set{' '}
+                                    {match.set}
+                                  </p>
+                                )}
                                 <div className="stats">
                                   <div>
                                     <span>3-DART AVG</span>
@@ -940,7 +1117,9 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                                 {match.setup.players[match.legWinner]}{' '}
                                 {match.winner !== null
                                   ? 'wins the match!'
-                                  : 'takes the leg.'}
+                                  : match.setWinner !== null
+                                    ? 'takes the set.'
+                                    : 'takes the leg.'}
                               </h2>
                               {match.winner !== null && (
                                 <button
@@ -955,7 +1134,9 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                                   className="button primary"
                                   onClick={() => append({ type: 'next-leg' })}
                                 >
-                                  Next leg →
+                                  {match.setWinner !== null
+                                    ? 'Next set →'
+                                    : 'Next leg →'}
                                 </button>
                               )}
                             </>
@@ -981,7 +1162,9 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                               </div>
                               <p>
                                 {route
-                                  ? 'Finish on a double. Make it count.'
+                                  ? rules.outRule === 'double'
+                                    ? 'Finish on a double. Make it count.'
+                                    : 'Finish exactly on zero. Any segment counts.'
                                   : botTurn
                                     ? 'Your opponent’s score will appear shortly.'
                                     : entryMode === 'board'
@@ -1144,6 +1327,9 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                             onHitsChange={(hits) =>
                               visitDraft.update({ hits, mode: 'board' })
                             }
+                            inRule={rules.inRule}
+                            outRule={rules.outRule}
+                            opened={match.opened[match.turn]}
                             remaining={match.scores[match.turn]}
                             playerName={match.setup.players[match.turn]}
                             waitingForOpponent={botTurn}
@@ -1167,6 +1353,28 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                                 : 'What did you hit?'}
                           </h2>
                           <fieldset disabled={entryBlocked}>
+                            {!match.opened[match.turn] && (
+                              <div className="opening-entry">
+                                <p>
+                                  Double to start. Enter only the points from
+                                  your opening double onwards; count all darts
+                                  thrown.
+                                </p>
+                                <label>
+                                  <input
+                                    type="checkbox"
+                                    checked={opens}
+                                    onChange={(e) =>
+                                      visitDraft.update({
+                                        opens: e.target.checked,
+                                        mode: 'keypad',
+                                      })
+                                    }
+                                  />
+                                  Opened on a double this visit
+                                </label>
+                              </div>
+                            )}
                             <legend className="sr-only">
                               Enter visit score
                             </legend>
@@ -1256,7 +1464,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                                 ))}
                               </select>
                             </label>
-                            {finishing && (
+                            {finishing && rules.outRule === 'double' && (
                               <label className="double-confirm">
                                 <input
                                   type="checkbox"
@@ -1271,12 +1479,14 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
                                 {error}
                               </p>
                             )}
-                            {finishing && !double && (
-                              <p className="entry-hint">
-                                Confirm the finishing double, or this visit is a
-                                bust.
-                              </p>
-                            )}
+                            {finishing &&
+                              rules.outRule === 'double' &&
+                              !double && (
+                                <p className="entry-hint">
+                                  Confirm the finishing double, or this visit is
+                                  a bust.
+                                </p>
+                              )}
                             <button
                               className="button primary submit-score"
                               disabled={!score}

@@ -120,7 +120,9 @@ export function playerSummary(
       recent.push({
         opponent: match.setup.players[1 - index],
         won: match.winner === index,
-        score: `${match.legs[index]}–${match.legs[1 - index]}`,
+        score: match.setup.setsToWin
+          ? `${match.sets[index]}–${match.sets[1 - index]} sets`
+          : `${match.legs[index]}–${match.legs[1 - index]}`,
         date: entry.completedAt,
       });
   }

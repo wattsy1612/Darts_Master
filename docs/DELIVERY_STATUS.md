@@ -2,9 +2,9 @@
 
 The active goal covers the complete [implementation plan](IMPLEMENTATION_PLAN.md), [design brief](DESIGN_BRIEF.md) and all 83 items in the [feature backlog](FEATURE_BACKLOG.md). Status is evidence-based: an existing prototype feature or a partial implementation is not a completed public-release workstream.
 
-## Current increment — v0.8
+## Current increment — v0.9
 
-Exact-turn, tab-local visit drafts now survive refresh with explicit restore/discard. The built app precaches its public shell, reopens offline, and waits for all app tabs to close before activating an update. Production-build browser checks cover disconnected play, recovery, multi-tab updates and failed installations. See [draft/offline evidence](evidence/OFFLINE_2026-10-30.md). These are implementation steps, not full platform acceptance. The preceding [data reliability](evidence/DATA_2026-10-30.md) and [compact workspace](evidence/WORKSPACE_2026-10-30.md) increments remain in place.
+X01 now supports straight/double in/out, configurable starts, legs/sets and explicit starter rotation. Board and aggregate input share validation; bots, checkout suggestions, drafts, history, profile records and backup/import carry the chosen rules. New sessions use version 2 while v1 saves retain their original rules. See [rules evidence](evidence/RULES_2026-10-30.md). SC-01 remains partial pending bull-off, broader usability and match-policy gates. Previous [draft/offline](evidence/OFFLINE_2026-10-30.md), [data reliability](evidence/DATA_2026-10-30.md) and [workspace](evidence/WORKSPACE_2026-10-30.md) increments remain in place.
 
 ## Product decisions and external evidence
 
@@ -33,7 +33,7 @@ Exact-turn, tab-local visit drafts now survive refresh with explicit restore/dis
 | BR-04 | Selected identity and UI token alignment            | Not started        | Baseline: Planned / before broad screen rollout. Next gate: Owner/user review of concrete screens and adopted tokens                                          |
 | BR-05 | Logo/icon/asset/licence package                     | Not started        | Baseline: Planned / public v1. Next gate: Source assets, variants, usage guide and rights record                                                              |
 | BR-06 | Public app/landing/email/help consistency           | Not started        | Baseline: Planned / public v1. Next gate: No placeholder name/assets or unsupported capability claims                                                         |
-| SC-01 | X01 rules/sets configuration                        | Existing / partial | Baseline: Planned; core subset existing / local alpha. Next gate: Tested start/in/out/leg/set/starter fixtures                                                |
+| SC-01 | X01 rules/sets configuration                        | Existing / partial | Start/in/out/set/starter fixtures implemented with v1 compatibility; bull-off, broader rule UX and match-policy validation remain                             |
 | SC-02 | Participant/side/throw-order model                  | Not started        | Baseline: Planned / before pairs/online teams. Next gate: Current saves migrate; singles/pairs/teams rotate correctly                                         |
 | SC-03 | Concession, pause, abandon and rematch              | Existing / partial | Baseline: Planned; partial existing / local alpha. Next gate: Explicit result states and replay/correction tests                                              |
 | SC-04 | Game plugin registry plus Cricket                   | Not started        | Baseline: Planned / local alpha follow-on. Next gate: Complete rules, settings, UI and fixtures for first extra game                                          |

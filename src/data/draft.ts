@@ -16,6 +16,7 @@ export type VisitDraft = {
   score: string;
   darts: number;
   double: boolean;
+  opens?: boolean;
 };
 export const emptyDraft = (): VisitDraft => ({
   mode: 'board',
@@ -23,6 +24,7 @@ export const emptyDraft = (): VisitDraft => ({
   score: '',
   darts: 3,
   double: false,
+  opens: false,
 });
 export function turnIdentity(session: Session) {
   // The complete command prefix prevents restoring a draft after an edited history
@@ -40,11 +42,15 @@ export function validateDraft(value: unknown, session: Session): VisitDraft {
     !/^\d{0,3}$/.test(d.score) ||
     ![1, 2, 3].includes(d.darts) ||
     typeof d.double !== 'boolean' ||
+    (d.opens !== undefined && typeof d.opens !== 'boolean') ||
     match.legWinner !== null ||
     (match.setup.bot && match.turn === 1)
   )
     throw new Error('The saved draft cannot be used on this turn.');
-  evaluateDarts(match.scores[match.turn], d.hits);
+  evaluateDarts(match.scores[match.turn], d.hits, {
+    ...match.setup,
+    opened: match.opened[match.turn],
+  });
   // Incomplete or impossible keypad totals remain editable drafts, never results.
   return {
     mode: d.mode,
@@ -52,6 +58,7 @@ export function validateDraft(value: unknown, session: Session): VisitDraft {
     score: d.score,
     darts: d.darts,
     double: d.double,
+    opens: d.opens ?? false,
   };
 }
 export function hasDraft(draft: VisitDraft) {

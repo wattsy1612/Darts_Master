@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { dartLabel } from './domain/darts';
 import { difficulties } from './domain/bot';
-import { playerStats, replay } from './domain/match';
+import { ruleSummary } from './domain/x01';
+import { playerStats, replay, formatSummary } from './domain/match';
 import type { Session } from './domain/match';
 import { exportMatch } from './domain/archive';
 import type { ArchivedMatch } from './domain/archive';
@@ -78,15 +79,24 @@ export default function MatchHistory({
                   : `${match.setup.players[match.winner]} wins`}
               </h2>
               <div className="result-score">
-                {match.legs[0]} <span>—</span> {match.legs[1]}
+                {match.setup.setsToWin ? match.sets[0] : match.legs[0]}{' '}
+                <span>—</span>{' '}
+                {match.setup.setsToWin ? match.sets[1] : match.legs[1]}{' '}
+                {match.setup.setsToWin && <small>sets</small>}
               </div>
               <p>
-                {match.setup.start} · Double out · First to{' '}
-                {match.setup.legsToWin}
+                {match.setup.start} · {ruleSummary(match.setup)} ·{' '}
+                {formatSummary(match.setup)}
                 {match.setup.bot &&
                   ` · Practice: ${difficulties[match.setup.bot].name}`}
               </p>
             </div>
+            {match.setup.setsToWin && (
+              <p className="muted">
+                Total legs: {match.legs.join('–')} · Set {match.set} legs:{' '}
+                {match.setLegs.join('–')}
+              </p>
+            )}
             <div className="comparison-grid">
               {match.setup.players.map((name, index) => {
                 const stats = playerStats(match, index);
@@ -120,6 +130,7 @@ export default function MatchHistory({
                   <thead>
                     <tr>
                       <th>Visit</th>
+                      {match.setup.setsToWin && <th>Set</th>}
                       <th>Leg</th>
                       <th>Player</th>
                       <th>Score</th>
@@ -131,6 +142,7 @@ export default function MatchHistory({
                     {match.visits.map((v, i) => (
                       <tr key={i}>
                         <td>{i + 1}</td>
+                        {match.setup.setsToWin && <td>{v.set}</td>}
                         <td>{v.leg}</td>
                         <td>{match.setup.players[v.player]}</td>
                         <td>
@@ -147,7 +159,9 @@ export default function MatchHistory({
                             ? 'Bust · no score'
                             : v.checkout
                               ? 'Game shot'
-                              : 'Scored'}
+                              : v.openingRequired && !v.opens
+                                ? 'Not opened'
+                                : 'Scored'}
                         </td>
                       </tr>
                     ))}

@@ -114,7 +114,7 @@ describe('match rules', () => {
       replay({ ...session, commands: session.commands.slice(0, -1) }).scores[0],
     ).toBe(121);
     expect(() =>
-      replay({ ...session, version: 2 } as unknown as Session),
+      replay({ ...session, version: 99 } as unknown as Session),
     ).toThrow();
     expect(() =>
       replay({
@@ -125,7 +125,7 @@ describe('match rules', () => {
   });
   it('validates names and match settings', () => {
     expect(() => createMatch({ ...setup, players: ['', 'Bob'] })).toThrow();
-    expect(() => createMatch({ ...setup, start: 500 })).toThrow();
+    expect(() => createMatch({ ...setup, start: 1000.5 })).toThrow();
     expect(() => createMatch({ ...setup, legsToWin: 0 })).toThrow();
     expect(
       createMatch({ ...setup, players: [' Alice ', 'Bob'] }).setup.players[0],

@@ -41,8 +41,13 @@ function randomFor(seed: string) {
     return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
   };
 }
-function aimFor(remaining: number, darts: number): DartHit {
-  const route = checkoutRoute(remaining, darts);
+function aimFor(
+  remaining: number,
+  darts: number,
+  outRule: 'straight' | 'double' = 'double',
+  needsOpening = false,
+): DartHit {
+  const route = checkoutRoute(remaining, darts, outRule, needsOpening);
   if (route) {
     const first = route[0];
     if (first === 'Bull') return { number: 25, multiplier: 2 };
@@ -53,6 +58,7 @@ function aimFor(remaining: number, darts: number): DartHit {
       multiplier: prefix === 'T' ? 3 : prefix === 'D' ? 2 : 1,
     };
   }
+  if (needsOpening) return { number: 20, multiplier: 2 };
   if (remaining === 61) return { number: 19, multiplier: 1 };
   if (remaining > 60) return { number: 20, multiplier: 3 };
   if (remaining > 40) return { number: 20, multiplier: 1 };
@@ -66,9 +72,15 @@ export function botVisit(match: Match, seed: string): Visit {
   const skill = difficulties[match.setup.bot];
   const random = randomFor(seed);
   const hits: DartHit[] = [];
+  const rules = { ...match.setup, opened: match.opened[1] };
   for (let dart = 0; dart < 3; dart++) {
-    const before = evaluateDarts(match.scores[1], hits);
-    const target = aimFor(before.remaining, 3 - dart);
+    const before = evaluateDarts(match.scores[1], hits, rules);
+    const target = aimFor(
+      before.remaining,
+      3 - dart,
+      match.setup.outRule ?? 'double',
+      !before.opened,
+    );
     const accuracy =
       target.multiplier === 3
         ? skill.treble
@@ -107,13 +119,14 @@ export function botVisit(match: Match, seed: string): Visit {
         };
     }
     hits.push(hit);
-    if (evaluateDarts(match.scores[1], hits).status !== 'scoring') break;
+    if (evaluateDarts(match.scores[1], hits, rules).status !== 'scoring') break;
   }
-  const result = evaluateDarts(match.scores[1], hits);
+  const result = evaluateDarts(match.scores[1], hits, rules);
   return {
     total: result.total,
     darts: result.darts,
     double: result.double,
+    ...(!match.opened[1] ? { opens: result.opens } : {}),
     hits,
   };
 }

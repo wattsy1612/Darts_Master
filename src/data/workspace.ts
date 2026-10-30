@@ -37,7 +37,7 @@ export function normaliseSession(value: unknown): Session {
   const input = value as Session;
   if (
     !input ||
-    input.version !== 1 ||
+    ![1, 2].includes(input.version) ||
     !Array.isArray(input.commands) ||
     input.commands.length > 10000
   )
@@ -52,6 +52,11 @@ export function normaliseSession(value: unknown): Session {
   if (settings.bot !== undefined) setup.bot = settings.bot;
   if (settings.starter !== undefined) setup.starter = settings.starter;
   if (settings.playerIds !== undefined) setup.playerIds = settings.playerIds;
+  if (settings.inRule !== undefined) setup.inRule = settings.inRule;
+  if (settings.outRule !== undefined) setup.outRule = settings.outRule;
+  if (settings.setsToWin !== undefined) setup.setsToWin = settings.setsToWin;
+  if (settings.starterPolicy !== undefined)
+    setup.starterPolicy = settings.starterPolicy;
   const checked = createMatch(setup).setup;
   const commands: Command[] = input.commands.map((command) => {
     if (command?.type === 'next-leg') return { type: 'next-leg' };
@@ -70,6 +75,7 @@ export function normaliseSession(value: unknown): Session {
         total: v.total,
         darts: v.darts,
         double: v.double,
+        ...(v.opens !== undefined ? { opens: v.opens } : {}),
         ...(v.hits !== undefined
           ? {
               hits: v.hits.map((h) => ({
@@ -87,7 +93,7 @@ export function normaliseSession(value: unknown): Session {
   )
     throw new Error('The match identifier is invalid.');
   const session: Session = {
-    version: 1,
+    version: input.version,
     id: input.id,
     setup: checked,
     commands,

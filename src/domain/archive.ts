@@ -52,6 +52,7 @@ export function exportMatch(session: Session): string {
       result: {
         players: match.setup.players,
         legs: match.legs,
+        ...(match.setup.setsToWin ? { sets: match.sets } : {}),
         winner:
           match.winner === null ? null : match.setup.players[match.winner],
       },

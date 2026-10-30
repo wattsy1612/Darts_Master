@@ -1,9 +1,13 @@
+import { possibleVisit, rulesFor } from './x01';
+import type { X01Rules } from './x01';
 import { evaluateDarts } from './darts';
 import type { DartHit } from './darts';
-export type Setup = {
+export type Setup = X01Rules & {
   players: [string, string];
   start: number;
   legsToWin: number;
+  setsToWin?: number;
+  starterPolicy?: 'alternate-legs' | 'alternate-sets';
   bot?: 'rookie' | 'regular' | 'sharp';
   starter?: 0 | 1;
   playerIds?: [string | null, string | null];
@@ -13,10 +17,13 @@ export type Visit = {
   darts: number;
   double: boolean;
   hits?: DartHit[];
+  opens?: boolean;
 };
 export type RecordedVisit = Visit & {
   player: number;
   leg: number;
+  set: number;
+  openingRequired: boolean;
   bust: boolean;
   checkout: boolean;
 };
@@ -24,6 +31,11 @@ export type Match = {
   setup: Setup;
   scores: [number, number];
   legs: [number, number];
+  setLegs: [number, number];
+  sets: [number, number];
+  set: number;
+  setWinner: number | null;
+  opened: [boolean, boolean];
   turn: number;
   leg: number;
   legWinner: number | null;
@@ -32,37 +44,12 @@ export type Match = {
 };
 export type Command = { type: 'visit'; visit: Visit } | { type: 'next-leg' };
 export type Session = {
-  version: 1;
+  version: 1 | 2;
   id?: string;
   imported?: { sourceId: string; importedAt: string };
   setup: Setup;
   commands: Command[];
 };
-
-const values = [
-  ...new Set([
-    0,
-    25,
-    50,
-    ...Array.from({ length: 20 }, (_, i) => [
-      i + 1,
-      (i + 1) * 2,
-      (i + 1) * 3,
-    ]).flat(),
-  ]),
-];
-const doubles = [...Array.from({ length: 20 }, (_, i) => (i + 1) * 2), 50];
-
-const possibleTotals = [new Set([0])];
-for (let count = 1; count <= 3; count++) {
-  const totals = new Set<number>();
-  for (const previous of possibleTotals[count - 1])
-    for (const value of values) totals.add(previous + value);
-  possibleTotals.push(totals);
-}
-function possible(total: number, darts: number): boolean {
-  return possibleTotals[darts]?.has(total) ?? false;
-}
 
 export function createMatch(setup: Setup): Match {
   if (
@@ -75,8 +62,29 @@ export function createMatch(setup: Setup): Match {
   ) {
     throw new Error('Enter two player names, up to 30 characters each.');
   }
-  if (![301, 501, 701].includes(setup.start))
-    throw new Error('Choose 301, 501 or 701.');
+  if (!Number.isInteger(setup.start) || setup.start < 101 || setup.start > 1001)
+    throw new Error('Choose a starting score between 101 and 1001.');
+  if (
+    (setup.inRule !== undefined &&
+      !['straight', 'double'].includes(setup.inRule)) ||
+    (setup.outRule !== undefined &&
+      !['straight', 'double'].includes(setup.outRule))
+  )
+    throw new Error('Choose straight or double in/out.');
+  if (
+    setup.setsToWin !== undefined &&
+    (!Number.isInteger(setup.setsToWin) ||
+      setup.setsToWin < 1 ||
+      setup.setsToWin > 11)
+  )
+    throw new Error('Choose between 1 and 11 sets to win.');
+  if (
+    setup.starterPolicy !== undefined &&
+    !['alternate-legs', 'alternate-sets'].includes(setup.starterPolicy)
+  )
+    throw new Error('Choose a valid starting-player policy.');
+  if (setup.starterPolicy === 'alternate-sets' && !setup.setsToWin)
+    throw new Error('Alternating set starters requires a sets match.');
   if (
     !Number.isInteger(setup.legsToWin) ||
     setup.legsToWin < 1 ||
@@ -111,6 +119,14 @@ export function createMatch(setup: Setup): Match {
     },
     scores: [setup.start, setup.start],
     legs: [0, 0],
+    setLegs: [0, 0],
+    sets: [0, 0],
+    set: 1,
+    setWinner: null,
+    opened: [
+      rulesFor(setup).inRule === 'straight',
+      rulesFor(setup).inRule === 'straight',
+    ],
     turn: setup.starter ?? 0,
     leg: 1,
     legWinner: null,
@@ -136,47 +152,97 @@ export function recordVisit(match: Match, visit: Visit): Match {
   ) {
     throw new Error('Enter a score from 0 to 180 and 1–3 darts.');
   }
-  if (!possible(visit.total, visit.darts))
-    throw new Error(
-      `That score is not possible with ${visit.darts} dart${visit.darts === 1 ? '' : 's'}.`,
-    );
+  const rules = rulesFor(match.setup);
+  const player = match.turn;
+  const needsOpening = !match.opened[player];
+  let opens = visit.opens ?? false;
+  if (visit.opens !== undefined && typeof visit.opens !== 'boolean')
+    throw new Error('Confirm whether the visit opened on a double.');
   if (visit.hits !== undefined) {
-    const checked = evaluateDarts(match.scores[match.turn], visit.hits);
+    const checked = evaluateDarts(match.scores[player], visit.hits, {
+      ...rules,
+      opened: match.opened[player],
+    });
     if (
       checked.total !== visit.total ||
       checked.darts !== visit.darts ||
-      checked.double !== visit.double
+      checked.double !== visit.double ||
+      (visit.opens !== undefined && visit.opens !== checked.opens)
     )
       throw new Error('Dart details do not match the visit score.');
+    opens = checked.opens;
+  } else if (needsOpening && visit.opens === undefined) {
+    throw new Error(
+      'Confirm whether you opened on a double, or enter individual darts.',
+    );
   }
-  const player = match.turn;
   const remaining = match.scores[player] - visit.total;
-  const checkout = remaining === 0 && visit.double;
+  const checkout =
+    remaining === 0 &&
+    (!needsOpening || opens) &&
+    (rules.outRule === 'straight' || visit.double);
   if (visit.double && remaining !== 0)
     throw new Error('Only confirm a double for a finishing visit.');
   if (
-    checkout &&
-    !doubles.some((d) => possible(visit.total - d, visit.darts - 1))
+    !possibleVisit(visit.total, visit.darts, needsOpening, opens, visit.double)
   )
     throw new Error(
-      'That finish cannot end on a double with the selected darts.',
+      visit.double
+        ? 'That finish cannot end on a double with the selected darts and opening rule.'
+        : `That score is not possible with ${visit.darts} dart${visit.darts === 1 ? '' : 's'} and the opening rule.`,
     );
   const bust =
-    remaining < 0 || remaining === 1 || (remaining === 0 && !checkout);
+    remaining < 0 ||
+    (rules.outRule === 'double' && remaining === 1) ||
+    (remaining === 0 && !checkout);
   const scores: [number, number] = [...match.scores];
   const legs: [number, number] = [...match.legs];
   if (!bust) scores[player] = remaining;
-  if (checkout) legs[player]++;
+  const setLegs: [number, number] = [...match.setLegs];
+  const sets: [number, number] = [...match.sets];
+  const opened: [boolean, boolean] = [...match.opened];
+  if (!bust && opens) opened[player] = true;
+  if (checkout) {
+    legs[player]++;
+    setLegs[player]++;
+  }
+  const setWinner =
+    checkout &&
+    match.setup.setsToWin &&
+    setLegs[player] === match.setup.legsToWin
+      ? player
+      : null;
+  if (setWinner !== null) sets[player]++;
+  const winner =
+    checkout &&
+    (match.setup.setsToWin
+      ? sets[player] === match.setup.setsToWin
+      : legs[player] === match.setup.legsToWin)
+      ? player
+      : null;
   return {
     ...match,
     scores,
     legs,
+    setLegs,
+    sets,
+    opened,
+    setWinner,
     turn: checkout ? player : 1 - player,
     legWinner: checkout ? player : null,
-    winner: checkout && legs[player] === match.setup.legsToWin ? player : null,
+    winner,
     visits: [
       ...match.visits,
-      { ...visit, player, leg: match.leg, bust, checkout },
+      {
+        ...visit,
+        ...(needsOpening ? { opens } : {}),
+        player,
+        leg: match.leg,
+        set: match.set,
+        openingRequired: needsOpening,
+        bust,
+        checkout,
+      },
     ],
   };
 }
@@ -184,11 +250,25 @@ export function recordVisit(match: Match, visit: Visit): Match {
 export function nextLeg(match: Match): Match {
   if (match.winner !== null) throw new Error('The match is finished.');
   if (match.legWinner === null) throw new Error('Finish this leg first.');
+  const nextSet = match.setWinner !== null;
+  const set = match.set + (nextSet ? 1 : 0);
+  const setLegs: [number, number] = nextSet ? [0, 0] : [...match.setLegs];
+  const turn =
+    match.setup.starterPolicy === 'alternate-sets'
+      ? ((match.setup.starter ?? 0) + set - 1 + setLegs[0] + setLegs[1]) % 2
+      : ((match.setup.starter ?? 0) + match.leg) % 2;
   return {
     ...match,
+    set,
+    setLegs,
+    setWinner: null,
+    opened: [
+      rulesFor(match.setup).inRule === 'straight',
+      rulesFor(match.setup).inRule === 'straight',
+    ],
     scores: [match.setup.start, match.setup.start],
     leg: match.leg + 1,
-    turn: ((match.setup.starter ?? 0) + match.leg) % 2,
+    turn,
     legWinner: null,
   };
 }
@@ -196,11 +276,23 @@ export function nextLeg(match: Match): Match {
 export function replay(session: Session): Match {
   if (
     !session ||
-    session.version !== 1 ||
+    ![1, 2].includes(session.version) ||
     !Array.isArray(session.commands) ||
     session.commands.length > 10000
   )
     throw new Error('Saved match is invalid.');
+  if (
+    session.version === 1 &&
+    (![301, 501, 701].includes(session.setup?.start) ||
+      session.setup?.inRule !== undefined ||
+      session.setup?.outRule !== undefined ||
+      session.setup?.setsToWin !== undefined ||
+      session.setup?.starterPolicy !== undefined ||
+      session.commands.some(
+        (c) => c?.type === 'visit' && c.visit?.opens !== undefined,
+      ))
+  )
+    throw new Error('New rule settings require saved-match version 2.');
   let match = createMatch(session.setup);
   const visits: RecordedVisit[] = [];
   for (const command of session.commands) {
@@ -252,20 +344,48 @@ const setups: Segment[] = [
   { label: 'Bull', value: 50 },
   ...finishes.filter((d) => d.value !== 50),
 ];
-export function checkoutRoute(score: number, dartsLeft = 3): string[] | null {
-  if (score < 2 || score > 170 || dartsLeft < 1 || dartsLeft > 3) return null;
-  const direct = finishes.find((d) => d.value === score);
+export function checkoutRoute(
+  score: number,
+  dartsLeft = 3,
+  outRule: 'straight' | 'double' = 'double',
+  needsOpening = false,
+): string[] | null {
+  if (
+    !Number.isInteger(score) ||
+    score < (outRule === 'double' ? 2 : 1) ||
+    score > 180 ||
+    !Number.isInteger(dartsLeft) ||
+    dartsLeft < 1 ||
+    dartsLeft > 3
+  )
+    return null;
+  const ends = outRule === 'double' ? finishes : setups;
+  const starts = needsOpening ? finishes : setups;
+  const direct = ends.find(
+    (d) =>
+      d.value === score &&
+      (!needsOpening ||
+        finishes.includes(d) ||
+        d.label === 'Bull' ||
+        d.label.startsWith('D')),
+  );
   if (direct) return [direct.label];
   if (dartsLeft < 2) return null;
-  for (const a of setups) {
-    const end = finishes.find((d) => a.value + d.value === score);
+  for (const a of starts) {
+    const end = ends.find((d) => a.value + d.value === score);
     if (end) return [a.label, end.label];
   }
   if (dartsLeft < 3) return null;
-  for (const a of setups)
+  for (const a of starts)
     for (const b of setups) {
-      const end = finishes.find((d) => a.value + b.value + d.value === score);
+      const end = ends.find((d) => a.value + b.value + d.value === score);
       if (end) return [a.label, b.label, end.label];
     }
   return null;
+}
+
+export function formatSummary(setup: Setup) {
+  return setup.setsToWin
+    ? `First to ${setup.setsToWin} ${setup.setsToWin === 1 ? 'set' : 'sets'} · First to ${setup.legsToWin} ${setup.legsToWin === 1 ? 'leg' : 'legs'} per set`
+    : `First to ${setup.legsToWin} ${setup.legsToWin === 1 ? 'leg' : 'legs'}`;
 }

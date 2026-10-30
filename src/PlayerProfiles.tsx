@@ -141,6 +141,10 @@ export default function PlayerProfiles({
           </button>
         </div>
       </div>
+      <p className="muted">
+        Records combine all retained local X01 rule and match formats in the
+        selected mode. They are not verified rankings.
+      </p>
       {!players.length && (
         <section className="panel empty-players">
           <span className="brand-mark" aria-hidden="true">

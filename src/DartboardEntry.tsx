@@ -32,6 +32,9 @@ function position(hit: DartHit, index: number) {
 
 export default function DartboardEntry({
   remaining,
+  inRule = 'straight',
+  outRule = 'double',
+  opened = true,
   hits,
   onHitsChange: setHits,
   disabled,
@@ -41,6 +44,9 @@ export default function DartboardEntry({
   playerName,
 }: {
   remaining: number;
+  inRule?: 'straight' | 'double';
+  outRule?: 'straight' | 'double';
+  opened?: boolean;
   hits: DartHit[];
   onHitsChange: (hits: DartHit[]) => void;
   disabled: boolean;
@@ -52,11 +58,17 @@ export default function DartboardEntry({
   const [precision, setPrecision] = useState(false);
   const [multiplier, setMultiplier] = useState<1 | 2 | 3>(1);
   const [hover, setHover] = useState('');
-  const result = evaluateDarts(remaining > 1 ? remaining : 2, hits);
+  const evaluation = { inRule, outRule, opened };
+  const result = evaluateDarts(remaining > 0 ? remaining : 2, hits, evaluation);
   const ended = result.status !== 'scoring';
   const route =
     !ended && !disabled
-      ? checkoutRoute(result.remaining, 3 - hits.length)
+      ? checkoutRoute(
+          result.remaining,
+          3 - hits.length,
+          outRule,
+          !result.opened,
+        )
       : null;
   const locked = disabled || hits.length === 3 || ended;
   function add(hit: DartHit) {
@@ -239,13 +251,20 @@ export default function DartboardEntry({
         </div>
       </div>
       <div className="dartboard-controls">
+        {!disabled && !result.opened && (
+          <p className="opening-notice">
+            Double to start. Darts before your opening double score zero.
+          </p>
+        )}
         <div className="dart-slots" aria-label="Darts this visit">
           {[0, 1, 2].map((i) => (
             <div key={i} className={`dart-slot ${hits[i] ? 'filled' : ''}`}>
               <small>DART {i + 1}</small>
               <strong>{hits[i] ? dartLabel(hits[i]) : '—'}</strong>
               <span>
-                {hits[i] ? `${dartValue(hits[i])} pts` : 'Not thrown'}
+                {hits[i]
+                  ? `${evaluateDarts(remaining > 0 ? remaining : 2, hits.slice(0, i + 1), evaluation).total - evaluateDarts(remaining > 0 ? remaining : 2, hits.slice(0, i), evaluation).total} pts`
+                  : 'Not thrown'}
               </span>
             </div>
           ))}
@@ -382,6 +401,7 @@ export default function DartboardEntry({
                 total: result.total,
                 darts: result.darts,
                 double: result.double,
+                ...(!opened ? { opens: result.opens } : {}),
                 hits,
               })
             }
