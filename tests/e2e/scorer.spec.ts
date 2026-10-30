@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
 
+// Retain explicit coverage for the visit-total input alongside board tests.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem('darts-master.input-mode', 'keypad'),
+  );
+});
+
 test('score, recover a match, undo, finish and start the next leg', async ({
   page,
 }) => {

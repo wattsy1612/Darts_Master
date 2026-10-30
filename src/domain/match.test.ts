@@ -134,6 +134,13 @@ describe('match rules', () => {
 });
 
 describe('checkout routes', () => {
+  it('only suggests finishes possible with the darts left', () => {
+    expect(checkoutRoute(170, 2)).toBeNull();
+    expect(checkoutRoute(61, 1)).toBeNull();
+    expect(checkoutRoute(110, 2)).toEqual(['T20', 'Bull']);
+    expect(checkoutRoute(40, 1)).toEqual(['D20']);
+    expect(checkoutRoute(40, 0)).toBeNull();
+  });
   it('finds familiar finishes', () => {
     expect(checkoutRoute(170)).toEqual(['T20', 'T20', 'Bull']);
     expect(checkoutRoute(40)).toEqual(['D20']);

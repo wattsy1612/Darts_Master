@@ -19,7 +19,11 @@ Open **http://localhost:5173** in a browser on the Dell. When working from anoth
 ## Available now
 
 - Two-player 301, 501 and 701, with a configurable number of legs to win.
-- Manual visit entry with keypad and keyboard support; 1–3 darts per visit.
+- Interactive dartboard entry: tap singles, doubles, trebles and either bull.
+- Three-dart previews, hit markers, miss/bounce-out entry and draft correction.
+- Automatic early bust and double-out detection from the actual dart sequence.
+- Larger number buttons for precision entry on phones, plus optional keypad/keyboard visit totals.
+- Checkout suggestions recalculate for the score and darts left in a board-entered visit.
 - Double-out rules, including bull finishes, busts and impossible-score validation.
 - Checkout suggestions, three-dart averages, best visits and alternating leg starts.
 - Undo and redo for scoring and starting the next leg, with clear score feedback.
@@ -28,6 +32,8 @@ Open **http://localhost:5173** in a browser on the Dell. When working from anoth
 - Match summaries with scoring bands, 180s and highest checkout, plus JSON export.
 - Protection against accidentally replacing an unfinished match.
 - Responsive layouts for desktop and phone screens.
+
+Board entry is the default for new installations; use the **Dartboard / Keypad** switch to choose and save your preferred input method. Board visits are recorded only after confirmation, so you can correct a misplaced tap first. Unrecorded draft darts are not saved across a refresh.
 
 The current match and latest 100 completed matches stay in this browser's local storage. Starting a new match replaces an unfinished game only after confirmation; completed results remain in history. Export a match as JSON to keep a separate copy. Clearing browser data removes local results. There is no account or cloud sync yet. External fonts use system fallbacks if unavailable.
 
@@ -58,6 +64,8 @@ In VS Code, use **WSL: Open Folder in WSL** and choose `/mnt/c/Users/watts/Docum
 
 ## Code layout
 
+- `src/DartboardEntry.tsx`: interactive SVG board, per-dart preview and touch-friendly precision controls.
+- `src/domain/darts.ts`: segment validation and sequential dart evaluation.
 - `src/domain/match.ts`: pure scoring rules and replayable match commands. It has no React, browser or camera dependency.
 - `src/domain/match.test.ts`: scoring rules, finishes, statistics and replay tests.
 - `src/App.tsx`: local match setup, scorer, persistence and navigation.

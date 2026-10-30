@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { dartLabel } from './domain/darts';
 import { playerStats, replay } from './domain/match';
 import type { Session } from './domain/match';
 import { exportMatch } from './domain/archive';
@@ -124,7 +125,14 @@ export default function MatchHistory({
                         <td>{i + 1}</td>
                         <td>{v.leg}</td>
                         <td>{match.setup.players[v.player]}</td>
-                        <td>{v.total}</td>
+                        <td>
+                          {v.total}
+                          {v.hits && (
+                            <small className="history-hit-labels">
+                              {v.hits.map(dartLabel).join(' · ')}
+                            </small>
+                          )}
+                        </td>
                         <td>{v.darts}</td>
                         <td>
                           {v.bust

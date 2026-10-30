@@ -1,9 +1,16 @@
+import { evaluateDarts } from './darts';
+import type { DartHit } from './darts';
 export type Setup = {
   players: [string, string];
   start: number;
   legsToWin: number;
 };
-export type Visit = { total: number; darts: number; double: boolean };
+export type Visit = {
+  total: number;
+  darts: number;
+  double: boolean;
+  hits?: DartHit[];
+};
 export type RecordedVisit = Visit & {
   player: number;
   leg: number;
@@ -104,6 +111,15 @@ export function recordVisit(match: Match, visit: Visit): Match {
     throw new Error(
       `That score is not possible with ${visit.darts} dart${visit.darts === 1 ? '' : 's'}.`,
     );
+  if (visit.hits !== undefined) {
+    const checked = evaluateDarts(match.scores[match.turn], visit.hits);
+    if (
+      checked.total !== visit.total ||
+      checked.darts !== visit.darts ||
+      checked.double !== visit.double
+    )
+      throw new Error('Dart details do not match the visit score.');
+  }
   const player = match.turn;
   const remaining = match.scores[player] - visit.total;
   const checkout = remaining === 0 && visit.double;
@@ -201,14 +217,16 @@ const setups: Segment[] = [
   { label: 'Bull', value: 50 },
   ...finishes.filter((d) => d.value !== 50),
 ];
-export function checkoutRoute(score: number): string[] | null {
-  if (score < 2 || score > 170) return null;
+export function checkoutRoute(score: number, dartsLeft = 3): string[] | null {
+  if (score < 2 || score > 170 || dartsLeft < 1 || dartsLeft > 3) return null;
   const direct = finishes.find((d) => d.value === score);
   if (direct) return [direct.label];
+  if (dartsLeft < 2) return null;
   for (const a of setups) {
     const end = finishes.find((d) => a.value + d.value === score);
     if (end) return [a.label, end.label];
   }
+  if (dartsLeft < 3) return null;
   for (const a of setups)
     for (const b of setups) {
       const end = finishes.find((d) => a.value + b.value + d.value === score);
