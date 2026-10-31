@@ -100,17 +100,30 @@ export default function PlayerProfiles({
     [sorted, archives, practice, format],
   );
   return (
-    <div className="players-page">
+    <div
+      className={`players-page ${players.length ? 'has-players' : 'is-empty'}`}
+    >
       <section className="panel add-player-panel">
         <div>
-          <div className="section-label">BUILD YOUR LINE-UP</div>
-          <h2>Keep your name. Track your game.</h2>
+          <div className="section-label">THE PEOPLE AT YOUR BOARD</div>
+          <h2>
+            {players.length ? (
+              'Add to your line-up.'
+            ) : (
+              <>
+                Your line-up.
+                <br />
+                Your next game.
+              </>
+            )}
+          </h2>
           <p className="muted">
-            Save a player, then select them at match setup to link their
-            results.
+            Save the players you throw with. Select them at match setup to keep
+            their results together.
           </p>
         </div>
         <form
+          className="add-player-form"
           onSubmit={async (e) => {
             e.preventDefault();
             if (await onAdd(name)) setName('');
@@ -122,7 +135,7 @@ export default function PlayerProfiles({
               required
               maxLength={30}
               value={name}
-              placeholder="e.g. Wattsy"
+              placeholder="Enter a player’s name"
               autoComplete="off"
               onChange={(e) => setName(e.target.value)}
             />
@@ -132,10 +145,15 @@ export default function PlayerProfiles({
           </button>
         </form>
       </section>
+      <div className="players-collection-heading">
+        <div>
+          <h2>
+            Your players <span>{players.length}</span>
+          </h2>
+          <p>Saved on this device</p>
+        </div>
+      </div>
       <div className="players-toolbar">
-        <span>
-          {players.length} saved {players.length === 1 ? 'player' : 'players'}
-        </span>
         <div role="group" aria-label="Player statistics mode">
           <button aria-pressed={!practice} onClick={() => setPractice(false)}>
             Versus players
@@ -143,33 +161,65 @@ export default function PlayerProfiles({
           <button aria-pressed={practice} onClick={() => setPractice(true)}>
             Practice
           </button>
-        </div>
+        </div>{' '}
+        <label className="record-format">
+          Record format
+          <select
+            value={format}
+            onChange={(e) => setFormat(e.target.value as typeof format)}
+          >
+            <option value="singles">Singles</option>
+            <option value="multiplayer">Multiplayer</option>
+            <option value="team">Pairs and teams</option>
+            <option value="all">All local formats</option>
+          </select>
+        </label>
       </div>
-      <p className="muted">
+      <p className="record-scope">
         Records combine retained local X01 rule variants within the selected
         match format and mode. They are not verified rankings.
       </p>
-      <label className="record-format">
-        Record format
-        <select
-          value={format}
-          onChange={(e) => setFormat(e.target.value as typeof format)}
-        >
-          <option value="singles">Singles</option>
-          <option value="multiplayer">Multiplayer</option>
-          <option value="team">Pairs and teams</option>
-          <option value="all">All local formats</option>
-        </select>
-      </label>
       {!players.length && (
         <section className="panel empty-players">
-          <span className="brand-mark" aria-hidden="true">
-            ◎
-          </span>
-          <h2>Your line-up starts here.</h2>
+          <div className="lineup-illustration" aria-hidden="true">
+            <svg viewBox="0 0 220 160" fill="none">
+              <circle
+                cx="110"
+                cy="72"
+                r="54"
+                stroke="currentColor"
+                strokeWidth="1"
+              />
+              <circle
+                cx="110"
+                cy="72"
+                r="38"
+                stroke="currentColor"
+                strokeWidth="1"
+              />
+              <circle
+                cx="110"
+                cy="72"
+                r="18"
+                stroke="currentColor"
+                strokeWidth="1"
+              />
+              <circle cx="110" cy="72" r="5" fill="currentColor" />
+              <path
+                d="M110 18v36m0 36v36M56 72h36m36 0h36M72 34l26 26m24 24 26 26M148 34l-26 26m-24 24-26 26"
+                stroke="currentColor"
+              />
+              <path
+                d="m110 72 48-39 22 2-12 16-15-7-43 28Z"
+                fill="currentColor"
+              />
+              <path d="M55 145h110" stroke="currentColor" />
+            </svg>
+          </div>
+          <h2>A place for your first player.</h2>
           <p>
-            Save your first player above, or save a name when setting up a
-            match.
+            Add a name above to get started. Their linked results will appear
+            here as you play.
           </p>
         </section>
       )}
@@ -183,12 +233,20 @@ export default function PlayerProfiles({
               aria-label={`${player.name} profile`}
             >
               <div className="profile-heading">
-                <span className="profile-avatar">
+                <span
+                  className="profile-avatar"
+                  data-tone={
+                    Array.from(player.id).reduce(
+                      (n, c) => n + c.charCodeAt(0),
+                      0,
+                    ) % 4
+                  }
+                >
                   {player.name.slice(0, 2).toUpperCase()}
                 </span>
                 <div>
                   <span className="eyebrow">
-                    {practice ? 'PRACTICE RECORD' : 'VERSUS PLAYERS'}
+                    {practice ? 'PRACTICE RECORD' : 'LOCAL PLAYER'}
                   </span>
                   <h2>{player.name}</h2>
                 </div>
@@ -234,6 +292,39 @@ export default function PlayerProfiles({
                   </div>
                 </form>
               )}
+              <dl className="profile-stat-grid">
+                {[
+                  [
+                    '3-dart average',
+                    stats.coverage.darts ? stats.average : '—',
+                  ],
+                  ['Matches', stats.matches],
+                  [
+                    format === 'team' || format === 'all'
+                      ? 'Side legs won'
+                      : 'Legs won',
+                    stats.legsWon,
+                  ],
+                  [
+                    format === 'team' || format === 'all'
+                      ? 'Opposing legs'
+                      : 'Legs lost',
+                    stats.legsLost,
+                  ],
+                  ['180s', stats.maximums],
+                  ['Highest checkout', stats.highestCheckout || '—'],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className={
+                      label === '3-dart average' ? 'profile-average' : undefined
+                    }
+                  >
+                    <dt>{label}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+              </dl>
               <div className="profile-record">
                 <strong>
                   {stats.wins}
@@ -253,31 +344,7 @@ export default function PlayerProfiles({
                   <small>WIN RATE</small>
                 </div>
               </div>
-              <dl className="profile-stat-grid">
-                {[
-                  ['3-dart average', stats.average],
-                  ['Matches', stats.matches],
-                  [
-                    format === 'team' || format === 'all'
-                      ? 'Side legs won'
-                      : 'Legs won',
-                    stats.legsWon,
-                  ],
-                  [
-                    format === 'team' || format === 'all'
-                      ? 'Opposing legs'
-                      : 'Legs lost',
-                    stats.legsLost,
-                  ],
-                  ['180s', stats.maximums],
-                  ['Highest checkout', stats.highestCheckout || '—'],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <dt>{label}</dt>
-                    <dd>{value}</dd>
-                  </div>
-                ))}
-              </dl>
+
               <ScoreEvidence
                 coverage={stats.coverage}
                 importedMatches={stats.importedMatches}

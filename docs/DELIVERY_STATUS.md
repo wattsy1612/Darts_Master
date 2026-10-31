@@ -2,7 +2,11 @@
 
 The product scope covers the complete [implementation plan](IMPLEMENTATION_PLAN.md), [design brief](DESIGN_BRIEF.md) and all 83 items in the [feature backlog](FEATURE_BACKLOG.md). Status is evidence-based: an existing prototype feature or a partial implementation is not a completed public-release workstream.
 
-## Current increment — v0.19.1
+## Current increment — v0.20
+
+The actual Players page now uses a compact profile collection, a smaller add-player section once profiles exist, prominent recorded averages, clearer supporting statistics and a consistent slate/mint shell. Native SVG navigation replaces the mixed text symbols; non-playing phone/tablet pages use labelled bottom navigation. Missing averages display an em dash rather than a zero-performance claim. Existing profile links, records, rename and scoring operations remain intact. See [visual evidence](evidence/PLAYERS_POLISH_2026-10-31.md). This is a provisional UI direction, not completion of brand or accessibility acceptance.
+
+## Functional foundation — v0.19.1
 
 The Cricket playing preview now uses a compact score/input/visit workspace with shared navigation links, dedicated Play, Match history and Data & backups views, clearer confirmed points and retained drafts across navigation. The shared match centre switches between X01 and Cricket without mixing their metrics. Cricket history includes saved/imported results, actual visits, member breakdown and game-aware export. Public format-2 Cricket and mixed-game files now use the existing reviewed import, profile-link, conflict/dedup and recovery transaction path; format-1 Cricket, unknown games/rules and malformed records still fail validation. See [increment evidence](evidence/CRICKET_WORKSPACE_RESTORE_2026-10-31.md).
 

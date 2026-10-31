@@ -67,11 +67,11 @@ test('page routes survive refresh and back/forward navigation', async ({
   await expect(page).toHaveURL(/#\/history$/);
   await page.goBack();
   await expect(
-    page.getByRole('heading', { name: 'Your players. Their game.' }),
+    page.getByRole('heading', { name: 'Players', exact: true, level: 1 }),
   ).toBeVisible();
   await page.reload();
   await expect(
-    page.getByRole('heading', { name: 'Your players. Their game.' }),
+    page.getByRole('heading', { name: 'Players', exact: true, level: 1 }),
   ).toBeVisible();
   await page.goForward();
   await expect(

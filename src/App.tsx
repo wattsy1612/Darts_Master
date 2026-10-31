@@ -1,4 +1,5 @@
 import CricketPlay from './CricketPlay';
+import NavIcon from './ui/NavIcon';
 import MatchPageLinks from './ui/MatchPageLinks';
 import { x01RulesVersion } from './domain/games/identity';
 import { previewCorrection } from './domain/correction';
@@ -664,7 +665,7 @@ function DartsApplication({
 
   return (
     <div
-      className={`app-shell ${playing ? 'is-playing' : ''} ${playing && focusMode ? 'is-focused' : ''}`}
+      className={`app-shell ${playing ? 'is-playing' : ''} ${playing && focusMode ? 'is-focused' : ''} ${tab === 'players' ? 'is-players' : ''}`}
     >
       <aside className="sidebar">
         <a
@@ -676,9 +677,11 @@ function DartsApplication({
             setTab('score');
           }}
         >
-          <span className="brand-mark">◎</span>
+          <span className="brand-mark">
+            <NavIcon name="score" />
+          </span>
           <span>
-            DARTS<span className="brand-sub">WORKING TITLE / 001</span>
+            Darts Master<span className="brand-sub">LOCAL DARTS · PREVIEW</span>
           </span>
         </a>
         <div className="nav-label">THE CLUBHOUSE</div>
@@ -691,13 +694,16 @@ function DartsApplication({
               ['data', '↓', 'Data & backups'],
               ['roadmap', '↗', 'What’s next'],
             ] as const
-          ).map(([id, icon, title]) => (
+          ).map(([id, _icon, title]) => (
             <button
               key={id}
               className={`nav-item ${tab === id ? 'selected' : ''}`}
+              aria-current={tab === id ? 'page' : undefined}
               onClick={() => setTab(id)}
             >
-              <span aria-hidden="true">{icon}</span>
+              <span aria-hidden="true">
+                <NavIcon name={id} />
+              </span>
               {title}
               {tab === id && <span className="nav-dot" />}
             </button>
@@ -718,7 +724,7 @@ function DartsApplication({
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.19.1</span>
+          Development build <span>v0.20</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -768,7 +774,7 @@ function DartsApplication({
                   : tab === 'history'
                     ? 'Every visit counts.'
                     : tab === 'players'
-                      ? 'Your players. Their game.'
+                      ? 'Players'
                       : tab === 'data'
                         ? 'Keep your game safe.'
                         : tab === 'ui'
@@ -781,7 +787,7 @@ function DartsApplication({
                   : tab === 'history'
                     ? 'Saved matches, player stats and every visit at the board.'
                     : tab === 'players'
-                      ? 'A familiar line-up, with a record that grows with every match.'
+                      ? 'Your line-up, results and progress.'
                       : tab === 'data'
                         ? 'Back up, review and restore your local players and results.'
                         : 'One home for your game, your team and your competition.'}
