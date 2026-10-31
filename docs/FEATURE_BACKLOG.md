@@ -9,9 +9,9 @@ This backlog turns the [master plan](IMPLEMENTATION_PLAN.md) and [design brief](
 | ID    | Deliverable                                  | Status / first release                | Depends on       | Acceptance evidence                                                      |
 | ----- | -------------------------------------------- | ------------------------------------- | ---------------- | ------------------------------------------------------------------------ |
 | UX-01 | Audience/jobs and task matrix                | Planned / definition                  | Owner/user input | First release users and top tasks documented                             |
-| UX-02 | Dated competitor task audit                  | Planned / definition                  | UX-01            | Same task comparison with evidence and gaps                              |
+| UX-02 | Dated competitor task audit                  | In progress / dated public-source audit                  | UX-01            | Same task comparison with evidence and gaps                              |
 | UX-03 | Screen map and annotated core journeys       | Planned / definition                  | UX-01            | Guest, practice, correction, recovery and future account paths specified |
-| UX-04 | Device prototypes and usability sessions     | Planned / definition                  | UX-03            | Findings and changes from real Dell/phone/tablet tasks                   |
+| UX-04 | Device prototypes and usability sessions     | In progress / universal match study                  | UX-03            | Findings and changes from real Dell/phone/tablet tasks                   |
 | UX-05 | Semantic tokens and component foundations    | Planned / local alpha                 | UX-04            | Tokens and component gallery implemented                                 |
 | UX-06 | Compact match workspace and focus mode       | Planned / local alpha                 | UX-04–05         | Score, draft, record and correction reachable on reference screens       |
 | UX-07 | Loading/error/offline/empty/unsaved patterns | Planned / local alpha                 | UX-05            | Applicable states exercised with meaningful recovery                     |
@@ -19,7 +19,7 @@ This backlog turns the [master plan](IMPLEMENTATION_PLAN.md) and [design brief](
 | UX-09 | Phone/tablet/TV layout matrix                | Planned / staged                      | UX-04–06         | Actual device/orientation tests; TV control roles defined                |
 | BR-01 | Positioning, voice and naming criteria       | Planned / definition                  | UX-01            | Written identity criteria matching full product scope                    |
 | BR-02 | Name shortlist and screening                 | Planned / before public brand         | BR-01            | Dated app/business/domain/handle/trademark screen; selected name         |
-| BR-03 | Three visual directions on real screens      | Planned / local alpha                 | UX-04, BR-01     | Comparable match/profile/room/overlay prototypes                         |
+| BR-03 | Three visual directions on real screens      | In progress / first match study                 | UX-04, BR-01     | Comparable match/profile/room/overlay prototypes                         |
 | BR-04 | Selected identity and UI token alignment     | Planned / before broad screen rollout | BR-03            | Owner/user review of concrete screens and adopted tokens                 |
 | BR-05 | Logo/icon/asset/licence package              | Planned / public v1                   | BR-02, BR-04     | Source assets, variants, usage guide and rights record                   |
 | BR-06 | Public app/landing/email/help consistency    | Planned / public v1                   | BR-05, OP-04     | No placeholder name/assets or unsupported capability claims              |

@@ -2,6 +2,14 @@
 
 This is the experience workstream for the [full implementation plan](IMPLEMENTATION_PLAN.md). It describes intended design work, not a finished identity or a claim that all screens exist. The current green/cream interface and “Darts Master” title are provisional.
 
+## Owner direction and current research — 31 October 2026
+
+The owner explicitly prioritised styling and user friendliness, requested research into Target OMNI/DartCounter, Scolia and the **current** Autodarts, and clarified **universal across devices**. Tablet use matters; this does not select a tablet-only release. Preserve the full home/remote, club/team and organiser audience.
+
+Use the dated [competitor/task review](research/DARTS_PRODUCT_UX_2026-10-31.md) to distinguish inspected live entry flows, current official documentation, published visual examples and gated hands-on tasks. It includes concrete implications for score hierarchy, correction, input/source distinction and responsive layouts. Do not treat it as a completed comparative usability study.
+
+The [interactive universal match study](design/universal-match.html) compares light/dark, board/large-button input and score-display compositions using the same sample X01 state. It runs on the development server at `/docs/design/universal-match.html`, uses the actual scoring domain and never writes saved matches. The proposed charcoal/light-neutral/teal direction is provisional. Review layouts before introducing more feature-specific screens, then migrate the chosen patterns into shared production components for X01, Cricket and later games. No final brand or universal device-compatibility claim is implied.
+
 ## 1. Experience principles
 
 1. Playing comes first. At the oche, the player should see whose turn it is, the score, the current draft and the next action without searching through product navigation.
