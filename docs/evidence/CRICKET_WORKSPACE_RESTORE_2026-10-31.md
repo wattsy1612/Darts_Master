@@ -27,3 +27,11 @@ Browser screenshots `/tmp/darts-v019-cricket-tablet.png` and `/tmp/darts-v019-cr
 ## Remaining acceptance
 
 New pairs/team setup, cross-match Cricket profile summaries, earlier Cricket visit corrections and complete real-device/accessibility journeys remain open. The game registry's release-acceptance flag stays false while those gates are unfinished. Existing configured rosters, local play and public file restore are implemented capabilities; the complete product is not declared finished.
+
+## v0.19.1 confirmation-order follow-up
+
+One of the two v0.19 CI runs failed the built-app Cricket test after the immediate reload following an apparently accepted visit. The downloaded trace showed the previous saved turn plus its recoverable draft, confirming that the screen had advanced before the asynchronous transaction completed. This was a production UI ordering defect; the test was not weakened with an additional database wait.
+
+Cricket now publishes the next session only after `saveMatch` resolves. On a write failure, it retains the validated attempted version for memory backup and locks further match controls. A new browser regression keeps the actual native write transaction alive with pending reads, verifies the previous player and Saving state remain visible, then releases the transaction and reloads immediately after the next player appears. This specifically checks the commit boundary; it does not claim all games share identical publication behavior.
+
+Final v0.19.1 local verification passes typecheck/build, 255 unit tests, 82 browser tests and eight production offline/update tests (345 total). The previously failing offline journey also passes five consecutive CI-mode runs with `--retries=0`; the complete eight-test offline suite passes in CI mode with retries disabled. The added held-transaction regression checks the ordering directly, rather than relying on runner speed.

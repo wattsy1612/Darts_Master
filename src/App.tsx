@@ -718,7 +718,7 @@ function DartsApplication({
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.19</span>
+          Development build <span>v0.19.1</span>
         </div>
       </aside>
       <div className="main-shell">

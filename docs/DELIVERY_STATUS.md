@@ -2,9 +2,11 @@
 
 The product scope covers the complete [implementation plan](IMPLEMENTATION_PLAN.md), [design brief](DESIGN_BRIEF.md) and all 83 items in the [feature backlog](FEATURE_BACKLOG.md). Status is evidence-based: an existing prototype feature or a partial implementation is not a completed public-release workstream.
 
-## Current increment — v0.19
+## Current increment — v0.19.1
 
 The Cricket playing preview now uses a compact score/input/visit workspace with shared navigation links, dedicated Play, Match history and Data & backups views, clearer confirmed points and retained drafts across navigation. The shared match centre switches between X01 and Cricket without mixing their metrics. Cricket history includes saved/imported results, actual visits, member breakdown and game-aware export. Public format-2 Cricket and mixed-game files now use the existing reviewed import, profile-link, conflict/dedup and recovery transaction path; format-1 Cricket, unknown games/rules and malformed records still fail validation. See [increment evidence](evidence/CRICKET_WORKSPACE_RESTORE_2026-10-31.md).
+
+A CI offline reload check exposed Cricket advancing its visible turn before the database write completed. The v0.19.1 follow-up publishes a successful turn only after transaction completion; failed saves retain the validated attempted version with recovery controls. A regression holds the native transaction open, verifies the previous turn stays visible, releases it and immediately reloads the confirmed next turn.
 
 Full Cricket profile aggregation, new pairs/team setup, earlier-visit correction, broader device/accessibility validation and the remaining product backlog are incomplete. The registry's release-acceptance flag remains false; local play and public file restore are separately implemented capabilities.
 

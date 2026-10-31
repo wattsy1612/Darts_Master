@@ -262,3 +262,71 @@ test('navigating Cricket pages retains the exact draft and keeps primary control
     page.getByRole('heading', { name: 'Player 2 to throw', exact: true }),
   ).toBeVisible();
 });
+
+test('Cricket shows the saved next turn only after its transaction commits', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page
+    .getByRole('button', { name: 'Set up Cricket', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Start Cricket', exact: true })
+    .click();
+  await page.getByRole('button', { name: 'T20', exact: true }).click();
+  await expect(
+    page.getByText('Draft saved in this tab', { exact: true }),
+  ).toBeVisible();
+  await page.evaluate(() => {
+    const control = window as unknown as { holdCricketCommit: boolean };
+    control.holdCricketCommit = true;
+    const original = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (value, key) {
+      const request = original.call(this, value, key);
+      if (
+        this.name === 'workspace' &&
+        key === 'current' &&
+        value?.data?.current?.game === 'cricket' &&
+        value.data.current.commands.some(
+          (c: { type: string }) => c.type === 'visit',
+        )
+      ) {
+        const store = this;
+        const keepActive = () => {
+          const pending = store.get('__cricket_commit_test__');
+          pending.onsuccess = () => {
+            if (control.holdCricketCommit) keepActive();
+          };
+        };
+        keepActive();
+      }
+      return request;
+    };
+  });
+  await page
+    .getByRole('button', { name: 'Record Cricket visit', exact: true })
+    .click();
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Saving…' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Player 1 to throw', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Player 2 to throw', exact: true }),
+  ).toHaveCount(0);
+  await page.evaluate(() => {
+    (window as unknown as { holdCricketCommit: boolean }).holdCricketCommit =
+      false;
+  });
+  await expect(
+    page.getByRole('heading', { name: 'Player 2 to throw', exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole('heading', { name: 'Player 2 to throw', exact: true }),
+  ).toBeVisible();
+  expect(
+    (await readWorkspace<GameRecord>(page))?.data.current?.commands,
+  ).toHaveLength(1);
+});

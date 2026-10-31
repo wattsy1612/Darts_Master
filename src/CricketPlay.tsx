@@ -7,7 +7,6 @@ import {
   createCricket,
   replayCricket,
   rematchCricket,
-  cricketStats,
 } from './domain/games/cricket';
 import type { CricketCommand, CricketSession } from './domain/games/cricket';
 import { replayGame } from './domain/games/registry';
@@ -76,11 +75,16 @@ export default function CricketPlay({
     lock.current = true;
     setBusy(true);
     setError('');
+    let checked = false;
     try {
       replayCricket(next);
-      setSession(next);
+      checked = true;
       await repository.saveMatch(next);
+      setSession(next);
     } catch (e) {
+      // Retain the attempted version for recovery, but never publish a saved
+      // next turn before the database transaction has completed.
+      if (checked) setSession(next);
       setError(e instanceof Error ? e.message : 'Could not save Cricket.');
     } finally {
       lock.current = false;
