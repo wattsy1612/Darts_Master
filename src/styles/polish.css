@@ -745,3 +745,6 @@
     min-height: 60px;
   }
 }
+.players-page .players-toolbar button {
+  white-space: nowrap;
+}
