@@ -1,6 +1,6 @@
 # Shared game storage and recoverable upgrade
 
-Internal SC-04/SY-01/EN-01 work, application v0.17. X01 remains the playable game. Cricket records now use the same transactional storage, archive, profile links, backup and recovery machinery; the Cricket playing screens/public restore gate remain unfinished.
+Internal SC-04/SY-01/EN-01 work, application v0.18. Cricket now has a local playing preview using the same transactional storage, archive, profile links, backup and recovery machinery. Public Cricket file restore and complete result/history integration remain gated.
 
 ## Version boundaries
 
@@ -31,7 +31,7 @@ If any workspace/checkpoint/draft write fails, the entire upgrade rolls back. Re
 - Normal play can update/remove a game’s own result without dropping another game. Reusing a match ID across game types is rejected before current/archive replacement. Current/archive collisions with inconsistent content are rejected.
 - Content comparison strips local profile ownership links as before, includes Cricket’s game/rules identity and preserves the established X01 legacy hash recipe. Repeated imports deduplicate equivalent results; conflicting IDs require skip/copy review.
 - Full backup linking maps every side member’s explicit profile reference. Standalone exports import as guests. Names do not establish account ownership. Both games remain unverified local records.
-- Mixed-game backup format 2 validates through the same parser/plan/transaction path. Until Cricket’s UI is accepted, public restore rejects Cricket-bearing files before mutation. Internal tests opt in explicitly; this is a readiness gate, not an authority/permission grant. No UI game choice or independent local-storage shortcut bypasses it.
+- Mixed-game backup format 2 validates through the same parser/plan/transaction path. Until Cricket’s UI is accepted, public restore rejects Cricket-bearing files before mutation. Internal tests opt in explicitly; this is a readiness gate, not an authority/permission grant. The local playing preview does not bypass the public file restore gate or introduce an independent storage silo.
 - A current Cricket record already present in a v3 workspace is protected by a readable recovery screen. The X01 component cannot reinterpret or overwrite it. X01 history/profile views filter to X01 and say so; complete backups retain the shared archive, including records outside that view.
 - X01 historical corrections remain X01-only. Their full-workspace checkpoints include both games and restore without dropping the other game’s data.
 
@@ -43,4 +43,4 @@ The two files have distinct purposes: the normal/readable backup contains curren
 
 ## Remaining acceptance
 
-The common storage contract is implemented and tested, but Cricket is not selectable. Its setup, target scoreboard, segment/pass draft entry, history/profile aggregation, correction UI, rematch navigation and complete browser/offline/device journeys must be connected before the game registry marks it playable. Hosted sync, account ownership, provider authority and production readiness remain separate open gates.
+The shared store now powers the local Cricket playing preview, including exact-turn draft recovery, lifecycle, undo/redo and rematches. Two-player setup is available; imported/existing configured rosters can resume without losing actor attribution. New pairs/team setup, public file restore, full history/profile aggregation, earlier-visit correction and complete device/accessibility journeys remain acceptance work. Hosted sync, account ownership, provider authority and production readiness remain separate open gates.

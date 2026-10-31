@@ -1,6 +1,6 @@
 # Game registry and Cricket domain contract
 
-Application v0.17, internal SC-04/EN-01 foundation. **Cricket is not yet a playable app mode.** The registry keeps it unavailable until persistence, setup, score entry, history, statistics, correction and offline browser flows are integrated. Existing local X01 remains available.
+Application v0.18, internal SC-04/EN-01 work. **Cricket has a local playing preview, not completed release acceptance.** The accepted-game registry remains gated while public file restore, complete history/profile/correction and device/accessibility journeys are unfinished. Existing local X01 remains available.
 
 ## Registry boundary
 
@@ -10,7 +10,7 @@ Historical untagged schema 1–5 documents remain X01. New X01 games/rematches i
 
 X01 canonicalisation now lives in `src/domain/session.ts`, independent of browser storage. `workspace.ts` re-exports that API to preserve callers. Shared turn-order/member selection moved to `participants.ts`; shared pause/resume/concession/abandon semantics live in `games/lifecycle.ts`. X01 retains its old exported helpers and scoring rules. Those shared helpers do not merge game-specific scores or statistics.
 
-The domain parser and shared v3 workspace can validate and persist Cricket records. Public restore remains gated until the playing UI is complete; see [shared storage](SHARED_GAME_STORAGE.md). It cannot accidentally accept a Cricket-tagged payload as X01 even if the remaining fields resemble a valid old match. `playableGames()` exposes only X01 at this stage. SC-04 remains in progress.
+The domain parser and shared v3 workspace can validate and persist Cricket records. Public file restore remains gated until all result/history integration is complete; see [shared storage](SHARED_GAME_STORAGE.md). It cannot accidentally accept a Cricket-tagged payload as X01 even if the remaining fields resemble a valid old match. `playableGames()` exposes only X01 at this stage. SC-04 remains in progress.
 
 ## Rules review and deliberate variant
 
@@ -39,8 +39,8 @@ These are recorded local statistics, not a rating or verified competition record
 ## Remaining SC-04 acceptance work
 
 1. Shared game-aware storage, recoverable workspace migration and internal import/export/recovery are implemented; public restore must remain gated until the UI supports its results.
-2. Deliver a visible game choice, explicit Cricket rules/setup, target scoreboard, segment/pass entry and per-visit draft recovery.
-3. Add game-aware results, profiles, rematches, correction consequences and data coverage without contaminating X01 records.
-4. Complete browser, production offline/update, accessibility and physical-device journeys before setting the plugin playable.
+2. Local preview now delivers a game choice, two-player setup, target scoreboard, exact segment/pass entry, bull-off and explicit per-visit draft recovery. New pairs/team setup still needs connecting; existing configured rosters can resume.
+3. Local results, undo/redo, next legs and rematches now use the shared persistence boundary. Add full game-aware history/profile aggregation, earlier-visit correction consequences and data coverage without contaminating X01 records.
+4. Complete public restore, browser, production offline/update, accessibility and physical-device journeys before accepting the plugin for release.
 
-Do not bypass those gates by giving Cricket a separate unreviewed local-storage silo or advertising an unfinished chooser entry.
+The preview uses the shared workspace and draft stores. Its `playable` registry flag remains false: that flag records completed integration acceptance, rather than mere visibility of an experimental local screen.

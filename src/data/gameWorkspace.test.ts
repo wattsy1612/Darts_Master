@@ -286,7 +286,7 @@ describe('shared game persistence, import and recovery', () => {
     await repo.saveMatch(cricket(undefined, true));
     const text = backupText(repo.document.data);
     expect(JSON.parse(text).version).toBe(2);
-    expect(() => inspectBackup(text)).toThrow(/not available/);
+    expect(() => inspectBackup(text)).toThrow(/Cricket file restore is not enabled/);
     const incoming = inspectBackup(text, { allowUnavailableGames: true }),
       plan = buildImportPlan(
         emptyData(),

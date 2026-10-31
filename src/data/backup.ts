@@ -98,7 +98,7 @@ export function inspectBackup(
     ) {
       if (!options?.allowUnavailableGames)
         throw new Error(
-          'Cricket is not available in this scorer yet. No saved data was changed.',
+          'Cricket file restore is not enabled yet. Keep this file; no saved data was changed.',
         );
       if (input.version !== 2)
         throw new Error('Cricket requires backup or match export version 2.');

@@ -55,7 +55,7 @@ test('explicit other games and future rules cannot be imported as X01 even with 
         ),
       });
     await expect(page.getByRole('alert')).toContainText(
-      patch.game === 'cricket' ? 'Cricket is not available' : 'rules version',
+      patch.game === 'cricket' ? 'Cricket file restore is not enabled' : 'rules version',
     );
     await expect(
       page.getByRole('button', { name: 'Confirm import', exact: true }),

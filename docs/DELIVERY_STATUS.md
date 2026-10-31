@@ -2,9 +2,9 @@
 
 The active goal covers the complete [implementation plan](IMPLEMENTATION_PLAN.md), [design brief](DESIGN_BRIEF.md) and all 83 items in the [feature backlog](FEATURE_BACKLOG.md). Status is evidence-based: an existing prototype feature or a partial implementation is not a completed public-release workstream.
 
-## Current increment — v0.17
+## Current increment — v0.18
 
-The shared workspace now stores both game records transactionally. Version-2 X01 workspaces upgrade to v3 with an exact pre-upgrade checkpoint and preserved exact-turn drafts; failed upgrades retain raw/readable original data. Mixed archives, game-aware format-2 backups, explicit profile links, conflict/dedup and recovery use the same persistence boundary. Data & backups offers pre-upgrade and last-saved readable copies, while current-memory backups stay internally consistent after failed writes. See [storage contract](SHARED_GAME_STORAGE.md) and [evidence](evidence/SHARED_GAME_STORAGE_2026-10-30.md). Cricket public restore/playing UI remains gated; its screen/history/profile/correction/device acceptance and the full goal stay open.
+A local Cricket playing preview now connects the shared engine and workspace: two-player setup, marks/points table, exact segment entry, pass, bull-off, lifecycle, undo/redo, leg continuation, results and rematches. Existing Cricket records reopen directly, including configured rosters. The shared exact-turn draft system now validates Cricket separately from X01 and requires explicit restore after reload. Failed writes retain the screen version, protect controls and offer independent current/saved backups. Public Cricket file restore, full history/profile/correction integration and device/accessibility acceptance remain open; the registry's accepted-game gate stays false. See [Cricket playing evidence](evidence/CRICKET_PLAY_2026-10-31.md). The complete 83-item goal remains active.
 
 ## Product decisions and external evidence
 
@@ -36,7 +36,7 @@ The shared workspace now stores both game records transactionally. Version-2 X01
 | SC-01 | X01 rules/sets configuration                        | Implemented / local | Configurable rules, sets, starter rotation and saved local bull-off fixtures pass; physical-device/rule UX validation and broader match policies remain.                |
 | SC-02 | Participant/side/throw-order model                  | Implemented / local | v1–v4 projection, v5 side/member/actor IDs, singles/multiplayer/pairs/teams rotation and individual metrics tested. Physical-device and online membership gates remain. |
 | SC-03 | Concession, pause, abandon and rematch              | Implemented / local | Replayable lifecycle, correction, terminal archive/import and rematch tests pass. Physical-device usability remains; online authority is tracked separately in RM.      |
-| SC-04 | Game plugin registry plus Cricket                   | In progress | Registry, standard Cricket domain and shared transactional storage/backup implemented. Playing UI, public restore, history/profile/correction and device gates remain. |
+| SC-04 | Game plugin registry plus Cricket                   | In progress | Registry, Cricket engine, shared storage and local playing preview implemented. Public restore, full history/profile/correction and device/accessibility gates remain. |
 | SC-05 | Additional party and training games                 | Not started         | Baseline: Planned / expansion. Next gate: Every published mode has tested supported formats                                                                             |
 | IN-01 | Visual/precision/keypad entry                       | Existing / partial  | Baseline: Existing / harden in local alpha. Next gate: Equivalent legal results and accessible interaction                                                              |
 | IN-02 | Unified correction/review policy                    | In progress | Local historical review/replay/removal, draft protection, atomic recovery and offline tests pass. Online authority and physical usability remain. |

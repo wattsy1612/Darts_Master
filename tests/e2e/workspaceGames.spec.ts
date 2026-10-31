@@ -150,7 +150,7 @@ test('a failed upgrade leaves the old database untouched and exposes readable re
   ).toBeVisible();
 });
 
-test('a stored Cricket current game is preserved behind recovery until its playing screen is connected', async ({
+test('a stored Cricket current game resumes without rewriting its saved record', async ({
   page,
 }) => {
   await page.goto('/');
@@ -175,7 +175,7 @@ test('a stored Cricket current game is preserved behind recovery until its playi
   await seed(page, { current: workspace });
   await page.reload();
   await expect(
-    page.getByRole('heading', { name: 'Your Cricket game is preserved.' }),
+    page.getByRole('heading', { name: 'Standard Cricket' }),
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Start match' })).toHaveCount(
     0,

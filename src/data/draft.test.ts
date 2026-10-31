@@ -1,3 +1,4 @@
+import { createCricket } from '../domain/games/cricket';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import { openLocalRepository, openDatabase } from './repository';
@@ -173,5 +174,54 @@ describe('unsubmitted visit drafts', () => {
     const reopened = await openDraftStore({ factory, tab: 'a' });
     expect(await reopened.read(session)).toBeNull();
     expect(repo.document.data.current).toEqual(session);
+  });
+});
+
+describe('game-aware Cricket drafts', () => {
+  const cricket = {
+    game: 'cricket' as const,
+    version: 1 as const,
+    rulesVersion: 'cricket-standard-v1' as const,
+    id: 'cricket-draft',
+    setup: createCricket({
+      players: ['A', 'B'],
+      variant: 'standard',
+      bull: 'split',
+      legsToWin: 1,
+    }).setup,
+    commands: [],
+  };
+  it('preserves exact Cricket hits with the shared revision/token safeguards and excludes X01 fields', async () => {
+    const { factory, repo } = await fixture();
+    await repo.saveMatch(cricket);
+    const store = await openDraftStore({ factory, tab: 'cricket' });
+    expect(await store.read(cricket)).toBeNull();
+    await store.save(cricket, draft);
+    expect(await store.read(cricket)).toEqual(draft);
+    expect(await store.read(session)).toBeNull();
+    for (const value of [
+      { ...draft, score: '60' },
+      { ...draft, mode: 'keypad' },
+      { ...draft, double: true },
+      {
+        ...draft,
+        hits: [...draft.hits, ...draft.hits, ...draft.hits, ...draft.hits],
+      },
+      { ...draft, hits: [{ number: 25, multiplier: 3 }] },
+    ]) {
+      expect(() => validateDraft(value, cricket)).toThrow();
+    }
+    expect(() =>
+      validateDraft(draft, { ...cricket, commands: [{ type: 'pause' }] }),
+    ).toThrow();
+    const duplicate = await openDraftStore({ factory, tab: 'cricket' });
+    await duplicate.read(cricket);
+    await store.save(cricket, {
+      ...draft,
+      hits: [{ number: 19, multiplier: 2 }],
+    });
+    await expect(duplicate.save(cricket, draft)).rejects.toThrow(
+      'Another copy',
+    );
   });
 });

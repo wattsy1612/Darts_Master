@@ -3,7 +3,8 @@ import type { GameRecord } from '../domain/games/registry';
 import { evaluateDarts } from '../domain/darts';
 import type { DartHit } from '../domain/darts';
 import { replay, bullPending } from '../domain/match';
-import type { Session } from '../domain/match';
+import { replayCricket } from '../domain/games/cricket';
+import { dartValue } from '../domain/darts';
 import { openDatabase } from './repository';
 import { objectStoreName, workspaceKey, validateDocument } from './workspace';
 
@@ -28,8 +29,34 @@ export function turnIdentity(session: GameRecord) {
   // happens to reach the same command count, player and remaining score.
   return JSON.stringify(parseGameRecord(session));
 }
-export function validateDraft(value: unknown, session: Session): VisitDraft {
+export function validateDraft(value: unknown, session: GameRecord): VisitDraft {
   const d = value as VisitDraft;
+  if (session.game === 'cricket') {
+    const match = replayCricket(session);
+    if (
+      !d ||
+      d.mode !== 'board' ||
+      !Array.isArray(d.hits) ||
+      d.hits.length > 3 ||
+      d.score !== '' ||
+      d.darts !== 3 ||
+      d.double !== false ||
+      (d.opens !== undefined && d.opens !== false) ||
+      match.status !== 'active' ||
+      (match.bullOff && match.bullOff.winner === null) ||
+      match.legWinner !== null
+    )
+      throw new Error('The saved Cricket draft cannot be used on this turn.');
+    d.hits.forEach(dartValue);
+    return {
+      mode: 'board',
+      hits: d.hits.map((h) => ({ number: h.number, multiplier: h.multiplier })),
+      score: '',
+      darts: 3,
+      double: false,
+      opens: false,
+    };
+  }
   const match = replay(session);
   if (
     !d ||
@@ -78,7 +105,7 @@ export class DraftStore {
     private db: IDBDatabase,
     private key: string,
   ) {}
-  async read(session: Session): Promise<VisitDraft | null> {
+  async read(session: GameRecord): Promise<VisitDraft | null> {
     return new Promise((resolve, reject) => {
       const tx = this.db.transaction(objectStoreName, 'readonly');
       const store = tx.objectStore(objectStoreName);
@@ -124,7 +151,7 @@ export class DraftStore {
       request.onerror = () => reject(request.error);
     });
   }
-  async save(session: Session, value: VisitDraft | null) {
+  async save(session: GameRecord, value: VisitDraft | null) {
     const checked = value ? validateDraft(value, session) : null;
     const nextToken = crypto.randomUUID();
     return new Promise<void>((resolve, reject) => {

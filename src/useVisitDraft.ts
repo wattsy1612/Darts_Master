@@ -6,7 +6,7 @@ import {
   turnIdentity,
 } from './data/draft';
 import type { DraftStore, VisitDraft } from './data/draft';
-import type { Session } from './domain/match';
+import type { GameRecord } from './domain/games/registry';
 
 type State = {
   turn: string;
@@ -15,7 +15,7 @@ type State = {
   loading: boolean;
 };
 export function useVisitDraft(
-  session: Session | null,
+  session: GameRecord | null,
   durable: boolean,
   enabled: boolean,
 ) {

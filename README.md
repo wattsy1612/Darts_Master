@@ -150,3 +150,9 @@ The provisional UI tokens are in `src/styles/tokens.css`, with compact workspace
 - `.github/workflows/ci.yml`: automated checks.
 
 Future input adapters will translate supported detection events into domain commands. No external scoring service is connected yet; each integration will depend on its available interfaces. Full registration (sign-up, email verification, sign-in, password reset and linking local profiles to an account) is a confirmed later milestone. See [the product roadmap](docs/ROADMAP.md). Online rooms, cloud profile sync, teams, tournaments, video and custom detection are future milestones. WSL uses polling for edits in this Windows-mounted folder so changes appear reliably during development.
+
+### Cricket local preview
+
+Choose **Set up Cricket** from match setup when there is no unfinished X01 match. Standard two-player Cricket supports marks/points, split bull, exact dart entry, pass, bull-off, legs, pause/resume, concession, undo/redo and rematches. Existing configured Cricket rosters reopen directly. Unrecorded darts use explicit tab-local draft recovery.
+
+Cricket remains an integration preview: new pairs/team setup, public Cricket file restore and full history/profile/correction views are still being connected. Downloaded Cricket backups preserve the data but are not yet accepted by the public file reviewer. The overall product goal and SC-04 acceptance remain open.

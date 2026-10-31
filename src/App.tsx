@@ -1,3 +1,4 @@
+import CricketPlay from './CricketPlay';
 import { x01RulesVersion } from './domain/games/identity';
 import { previewCorrection } from './domain/correction';
 import { backupText } from './data/backup';
@@ -63,23 +64,21 @@ export default function App() {
       active = false;
     };
   }, []);
-  if (repository?.document.data.current?.game === 'cricket')
+  const [gameView, setGameView] = useState<'x01' | 'cricket' | null>(null);
+  if (
+    repository &&
+    (gameView === 'cricket' ||
+      (gameView === null &&
+        repository.document.data.current?.game === 'cricket'))
+  )
     return (
-      <main className="boot-panel panel">
-        <h1>Your Cricket game is preserved.</h1>
-        <p>
-          The Cricket playing screen is being connected. Your current game and
-          shared history remain saved; you can download the complete backup
-          here.
-        </p>
-        <DataManager
-          repository={repository}
-          availableData={repository.document.data}
-        />
-      </main>
+      <CricketPlay repository={repository} onX01={() => setGameView('x01')} />
     );
   return repository ? (
-    <DartsApplication repository={repository} />
+    <DartsApplication
+      repository={repository}
+      onCricket={() => setGameView('cricket')}
+    />
   ) : (
     <main className="boot-panel panel">
       <h1>Opening your saved games…</h1>
@@ -88,7 +87,13 @@ export default function App() {
   );
 }
 
-function DartsApplication({ repository }: { repository: LocalRepository }) {
+function DartsApplication({
+  repository,
+  onCricket,
+}: {
+  repository: LocalRepository;
+  onCricket: () => void;
+}) {
   const saved = {
     session:
       repository.document.data.current?.game === 'cricket'
@@ -712,7 +717,7 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.17</span>
+          Development build <span>v0.18</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -914,6 +919,12 @@ function DartsApplication({ repository }: { repository: LocalRepository }) {
               <section className="setup-panel panel">
                 <div className="section-label">01 / MATCH SETUP</div>
                 <h2>Who’s at the board?</h2>
+                {(!session || (match && isTerminal(match))) &&
+                  saveState === 'saved' && (
+                    <ActionButton variant="secondary" onClick={onCricket}>
+                      Set up Cricket
+                    </ActionButton>
+                  )}
                 <p className="muted">
                   {setup.bot
                     ? 'Practice against a simulated opponent using your chosen match rules.'

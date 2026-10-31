@@ -365,3 +365,48 @@ test('a cached app upgrades the prior workspace and provides its original backup
     'darts-before-game-upgrade.json',
   );
 });
+
+test('Cricket reopens offline, explicitly restores its draft and saves a segment visit', async ({
+  page,
+  context,
+}) => {
+  await page.goto('/');
+  await ready(page);
+  await page
+    .getByRole('button', { name: 'Set up Cricket', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Start Cricket', exact: true })
+    .click();
+  await page.getByRole('button', { name: 'T20', exact: true }).click();
+  await expect(
+    page.getByText('Draft saved in this tab', { exact: true }),
+  ).toBeVisible();
+  await context.setOffline(true);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(
+    page.getByRole('heading', { name: 'Restore unrecorded Cricket darts?' }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Restore Cricket draft', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Record Cricket visit', exact: true })
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'Player 2 to throw', exact: true }),
+  ).toBeVisible();
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(
+    page.getByRole('heading', { name: 'Player 2 to throw', exact: true }),
+  ).toBeVisible();
+  const stored =
+    await readWorkspace<
+      import('../../src/domain/games/cricket').CricketSession
+    >(page);
+  expect(stored?.data.current?.game).toBe('cricket');
+  expect(stored?.data.current?.commands).toHaveLength(1);
+  await expect(
+    page.getByRole('heading', { name: 'Ready for offline play.' }),
+  ).toBeVisible();
+});

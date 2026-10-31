@@ -2102,3 +2102,64 @@ th {
     font-size: 12px;
   }
 }
+
+.cricket-workspace {
+  max-width: 64rem;
+  margin: auto;
+  padding: var(--space-4, 16px);
+  display: grid;
+  gap: 16px;
+}
+.cricket-workspace .panel {
+  padding: 20px;
+  min-width: 0;
+}
+.cricket-workspace label {
+  display: grid;
+  gap: 6px;
+  margin-block: 12px;
+}
+.cricket-workspace input,
+.cricket-workspace select {
+  max-width: 100%;
+  min-width: 0;
+}
+.cricket-board {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+.cricket-board caption {
+  text-align: left;
+  margin-bottom: 12px;
+}
+.cricket-board th,
+.cricket-board td {
+  padding: 10px 4px;
+  text-align: center;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border, #455060);
+}
+.cricket-board td {
+  font-size: 1.75rem;
+}
+.cricket-targets {
+  display: grid;
+  gap: 8px;
+}
+.cricket-targets > div {
+  display: grid;
+  grid-template-columns: 3rem repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  align-items: center;
+}
+.cricket-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 12px;
+}
+.cricket-workspace li {
+  overflow-wrap: anywhere;
+  margin-block: 8px;
+}
