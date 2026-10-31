@@ -1,0 +1,32 @@
+/* Provisional product tokens. Final identity remains a separate brand decision. */
+:root {
+  --color-page: #f4f4ee;
+  --color-surface: #fffef9;
+  --color-surface-muted: #edf2e5;
+  --color-ink: #202c25;
+  --color-ink-muted: #65775c;
+  --color-line: #dce2d2;
+  --color-accent: #c3ed86;
+  --color-accent-hover: #aed970;
+  --color-accent-ink: #24351e;
+  --color-danger: #a82d25;
+  --color-danger-surface: #fff0e8;
+  --color-warning: #775522;
+  --color-warning-surface: #fff3d9;
+  --color-focus: #6c953e;
+  --radius-control: 5px;
+  --radius-panel: 8px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --control-min: 44px;
+  --font-body: 'DM Sans', sans-serif;
+  --font-score: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --ink: #15251c;
+  --muted: #738076;
+  --green: var(--color-accent);
+  --line: var(--color-line);
+}

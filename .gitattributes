@@ -1,0 +1,3 @@
+# Preserve bundled upstream font bytes and licence files across Windows/WSL.
+src/assets/fonts/*.ttf binary
+public/fonts/*-OFL.txt -text -whitespace

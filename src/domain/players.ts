@@ -1,0 +1,169 @@
+import { visitStatistics } from './metrics';
+import type { RecordedVisit } from './match';
+import { rosterFormat } from './participants';
+import { matchId } from './archive';
+import type { ArchivedMatch } from './archive';
+import { replay } from './match';
+
+export type Player = { id: string; name: string; createdAt: string };
+export const playersKey = 'darts-master.players.v1';
+const nameKey = (name: string) => name.trim().toLowerCase();
+function validName(name: string) {
+  if (typeof name !== 'string' || !name.trim() || name.trim().length > 30)
+    throw new Error('Use a player name between 1 and 30 characters.');
+  return name.trim();
+}
+export function readPlayers(raw: string | null): Player[] {
+  if (!raw) return [];
+  const data = JSON.parse(raw);
+  if (
+    data?.version !== 1 ||
+    !Array.isArray(data.players) ||
+    data.players.length > 100
+  )
+    throw new Error('Invalid saved players.');
+  const ids = new Set<string>(),
+    names = new Set<string>();
+  return data.players.map((player: Player) => {
+    if (
+      !player ||
+      typeof player.id !== 'string' ||
+      !player.id.trim() ||
+      typeof player.createdAt !== 'string' ||
+      !Number.isFinite(Date.parse(player.createdAt))
+    )
+      throw new Error('Invalid player profile.');
+    const name = validName(player.name);
+    if (ids.has(player.id) || names.has(nameKey(name)))
+      throw new Error('Duplicate saved player.');
+    ids.add(player.id);
+    names.add(nameKey(name));
+    return { ...player, name };
+  });
+}
+export function addPlayer(
+  players: Player[],
+  name: string,
+  id = matchId(),
+): Player[] {
+  const checked = validName(name);
+  if (typeof id !== 'string' || !id.trim())
+    throw new Error('A saved player needs an identifier.');
+  if (players.length >= 100)
+    throw new Error('This browser already has 100 saved players.');
+  if (players.some((p) => nameKey(p.name) === nameKey(checked)))
+    throw new Error(
+      'That name is already saved. Choose it from saved players.',
+    );
+  if (players.some((p) => p.id === id))
+    throw new Error('The player identifier is already in use.');
+  return [
+    ...players,
+    { id, name: checked, createdAt: new Date().toISOString() },
+  ];
+}
+export function renamePlayer(
+  players: Player[],
+  id: string,
+  name: string,
+): Player[] {
+  const checked = validName(name);
+  if (!players.some((p) => p.id === id))
+    throw new Error('This player could not be found.');
+  if (players.some((p) => p.id !== id && nameKey(p.name) === nameKey(checked)))
+    throw new Error('Another saved player already uses that name.');
+  return players.map((p) => (p.id === id ? { ...p, name: checked } : p));
+}
+export function playerSummary(
+  archive: ArchivedMatch[],
+  id: string,
+  practice: boolean,
+  format: 'singles' | 'multiplayer' | 'team' | 'all' = 'singles',
+) {
+  let matches = 0,
+    wins = 0,
+    legsWon = 0,
+    legsLost = 0,
+    importedMatches = 0;
+  const visits: RecordedVisit[] = [];
+  const ruleVariants = new Set<string>();
+  const opponentVariants = new Set<string>();
+  const recent: {
+    opponent: string;
+    won: boolean;
+    score: string;
+    date: string;
+  }[] = [];
+  const seen = new Set<string>();
+  for (const entry of archive) {
+    const key = entry.session.id;
+    if (key && seen.has(key)) continue;
+    if (key) seen.add(key);
+    if (!!entry.session.setup.bot !== practice) continue;
+    const match = replay(entry.session);
+    const mode = rosterFormat(match.setup);
+    if (
+      format !== 'all' &&
+      (format === 'team'
+        ? mode !== 'teams' && mode !== 'pairs'
+        : mode !== format)
+    )
+      continue;
+    const index = match.sides.findIndex((s) =>
+      s.members.some((member) => member.profileId === id),
+    );
+    if (index < 0 || (practice && index === 1) || match.winner === null)
+      continue;
+    matches++;
+    if (match.winner === index) wins++;
+    legsWon += match.legs[index];
+    legsLost += match.legs.reduce(
+      (n, value, i) => (i === index ? n : n + value),
+      0,
+    );
+    if (entry.session.imported) importedMatches++;
+    ruleVariants.add(
+      `${match.setup.start}/${match.setup.inRule ?? 'straight'}/${match.setup.outRule ?? 'double'}/${match.setup.legsToWin}/${match.setup.setsToWin ?? 0}`,
+    );
+    if (practice)
+      opponentVariants.add(
+        JSON.stringify([
+          match.setup.bot,
+          match.setup.botModel ?? 1,
+          match.setup.botSettings ?? null,
+        ]),
+      );
+    visits.push(...match.visits.filter((v) => v.profileId === id));
+    if (recent.length < 3)
+      recent.push({
+        opponent: match.sides
+          .filter((_, i) => i !== index)
+          .map((s) => s.name)
+          .join(', '),
+        won: match.winner === index,
+        score:
+          [index, ...match.sides.map((_, i) => i).filter((i) => i !== index)]
+            .map((i) => (match.setup.setsToWin ? match.sets[i] : match.legs[i]))
+            .join('–') +
+          (match.setup.setsToWin ? ' sets' : '') +
+          (match.withdrawn[index]
+            ? ' · concession'
+            : match.status === 'conceded'
+              ? ' · concession'
+              : ''),
+        date: entry.completedAt,
+      });
+  }
+  return {
+    matches,
+    wins,
+    losses: matches - wins,
+    legsWon,
+    legsLost,
+    ...visitStatistics(visits),
+    importedMatches,
+    ruleVariants: ruleVariants.size,
+    opponentVariants: opponentVariants.size,
+    recent,
+  };
+}

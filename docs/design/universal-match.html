@@ -1,0 +1,1202 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <title>Darts Master · universal match design study</title>
+    <style>
+      @font-face {
+        font-family: DM;
+        src: url('/src/assets/fonts/DMSans-Variable.ttf');
+      }
+      @font-face {
+        font-family: Score;
+        src: url('/src/assets/fonts/BarlowCondensed-SemiBold.ttf');
+        font-weight: 600;
+      }
+      :root {
+        color-scheme: dark;
+        --page: #101719;
+        --panel: #192326;
+        --raised: #233237;
+        --line: #3c5056;
+        --text: #f1f6f5;
+        --muted: #b5c5c9;
+        --accent: #76e0ce;
+        --on-accent: #102824;
+        --danger: #ffb7ac;
+        --focus: #ffda86;
+        --shadow: 0 18px 60px #0003;
+      }
+      :root[data-theme='light'] {
+        color-scheme: light;
+        --page: #edf1ef;
+        --panel: #fff;
+        --raised: #e5eeeb;
+        --line: #a5b9b2;
+        --text: #152d2b;
+        --muted: #425e59;
+        --accent: #006a5e;
+        --on-accent: #fff;
+        --danger: #982d1e;
+        --focus: #775000;
+        --shadow: 0 18px 60px #17372e0c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--text);
+        font:
+          16px DM,
+          Arial,
+          sans-serif;
+      }
+      button,
+      a,
+      select {
+        font: inherit;
+      }
+      button {
+        min-height: 48px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 16px;
+        color: var(--text);
+        background: var(--raised);
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      button:hover:not(:disabled) {
+        border-color: var(--accent);
+      }
+      button:focus-visible,
+      a:focus-visible,
+      summary:focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 3px;
+      }
+      button.primary {
+        background: var(--accent);
+        color: var(--on-accent);
+        font-weight: 750;
+        border-color: var(--accent);
+      }
+      a {
+        color: var(--text);
+      }
+      .top {
+        max-width: 1600px;
+        padding: 12px 24px;
+        margin: auto;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+      }
+      .wordmark {
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        font-size: 20px;
+      }
+      .brand-symbol {
+        color: var(--accent);
+        font-size: 28px;
+      }
+      .study {
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .top-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+      }
+      .top-actions button {
+        font-size: 13px;
+        padding: 8px 12px;
+      }
+      .match {
+        max-width: 1440px;
+        margin: auto;
+        padding: 20px 24px 28px;
+      }
+      .match-bar {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+      .match-bar h1 {
+        font-size: 17px;
+        margin: 0;
+      }
+      .match-bar p {
+        font-size: 13px;
+        color: var(--muted);
+        margin: 6px 0 0;
+      }
+      .local {
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .local::before {
+        content: '';
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .arena {
+        display: grid;
+        grid-template-columns: minmax(170px, 1fr) minmax(310px, 480px) minmax(
+            170px,
+            1fr
+          );
+        gap: 20px;
+        align-items: center;
+      }
+      .player {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+        padding: 24px 20px;
+        min-width: 0;
+        box-shadow: var(--shadow);
+      }
+      .player.active {
+        border: 2px solid var(--accent);
+        padding: 23px 19px;
+      }
+      .turn-label {
+        display: block;
+        min-height: 22px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .player.active .turn-label {
+        color: var(--accent);
+        font-weight: 750;
+      }
+      .player h2 {
+        font-size: 20px;
+        margin: 6px 0 0;
+        overflow-wrap: anywhere;
+      }
+      .remaining {
+        font:
+          600 clamp(80px, 9vw, 148px)/1 Score,
+          Arial,
+          sans-serif;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.025em;
+        margin: 8px 0;
+      }
+      .confirmed {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .player-stats {
+        display: flex;
+        gap: 16px;
+        margin: 20px 0 0;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+      }
+      .player-stats div {
+        flex: 1;
+      }
+      .player-stats dt {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .player-stats dd {
+        margin: 4px 0 0;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .input-zone {
+        min-width: 0;
+      }
+      .input-choice {
+        display: flex;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 4px;
+        gap: 4px;
+        margin: 0 0 12px;
+      }
+      .input-choice button {
+        flex: 1;
+        min-height: 44px;
+        background: transparent;
+        border-color: transparent;
+        padding: 8px;
+        font-size: 14px;
+      }
+      .input-choice button[aria-pressed='true'] {
+        background: var(--raised);
+        border-color: var(--line);
+        font-weight: 750;
+      }
+      .board {
+        width: min(100%, 46vh, 440px);
+        margin: auto;
+        display: block;
+        overflow: visible;
+      }
+      .board text {
+        fill: #eee;
+        font: 600 17px DM;
+        pointer-events: none;
+      }
+      .board [role='button']:hover,
+      .board [role='button']:focus {
+        filter: brightness(1.6);
+        outline: none;
+        stroke: #ffda86;
+        stroke-width: 3;
+      }
+      .board-caption {
+        text-align: center;
+        color: var(--muted);
+        font-size: 12px;
+        margin: 8px 0 0;
+      }
+      .segments {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 7px;
+      }
+      .segments button {
+        min-height: 54px;
+        padding: 8px;
+        font-weight: 700;
+      }
+      .multiplier {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .multiplier button {
+        flex: 1;
+        padding: 8px;
+        font-size: 14px;
+      }
+      .multiplier button[aria-pressed='true'] {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .extras {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .extras button {
+        flex: 1;
+        padding: 8px;
+        font-size: 14px;
+      }
+      .visit {
+        grid-column: 1/-1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        align-items: center;
+        padding: 16px 20px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        margin-top: 2px;
+      }
+      .visit-title {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        margin-bottom: 10px;
+      }
+      .visit-title strong {
+        font-size: 14px;
+      }
+      .visit-title span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .dart-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .dart {
+        min-width: 56px;
+        padding: 9px 10px;
+        min-height: 48px;
+        text-align: center;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        font-weight: 750;
+        background: var(--raised);
+      }
+      .dart.chosen {
+        border-color: var(--accent);
+      }
+      .preview {
+        margin-left: 8px;
+        line-height: 1.3;
+      }
+      .preview span {
+        display: block;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .preview strong {
+        font-size: 22px;
+        font-variant-numeric: tabular-nums;
+      }
+      .record-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .record-actions button.primary {
+        flex: 1;
+        min-height: 56px;
+        font-size: 17px;
+      }
+      .record-actions .small {
+        font-size: 13px;
+        padding: 10px;
+      }
+      .under {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 16px;
+        align-items: center;
+      }
+      .checkout {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .checkout strong {
+        color: var(--text);
+        margin-left: 8px;
+      }
+      .minor {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .minor button {
+        font-size: 13px;
+        min-height: 44px;
+        padding: 8px 12px;
+      }
+      .note {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+        margin-top: 24px;
+        max-width: 70ch;
+      }
+      .notice {
+        color: var(--danger);
+        font-weight: 700;
+        font-size: 14px;
+        min-height: 22px;
+        margin: 10px 0 0;
+      }
+      .support {
+        margin-top: 20px;
+        border-top: 1px solid var(--line);
+        padding-top: 14px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .support summary {
+        cursor: pointer;
+        min-height: 44px;
+        align-content: center;
+      }
+      .support p {
+        max-width: 80ch;
+        line-height: 1.6;
+      }
+      .display .arena {
+        grid-template-columns: 1fr 1fr;
+      }
+      .display .input-zone,
+      .display .visit,
+      .display .under {
+        display: none;
+      }
+      .display .remaining {
+        font-size: clamp(100px, 22vw, 340px);
+      }
+      .display .player h2 {
+        font-size: clamp(24px, 4vw, 48px);
+      }
+      .display .player {
+        padding: 40px;
+      }
+      .display .player.active {
+        padding: 39px;
+      }
+      @media (min-width: 1500px) {
+        .match {
+          padding-top: 32px;
+        }
+        .arena {
+          gap: 32px;
+        }
+        .board {
+          width: min(100%, 50vh, 480px);
+        }
+      }
+      @media (max-width: 900px) {
+        .arena {
+          grid-template-columns: 1fr 1fr;
+          gap: 14px;
+        }
+        .player {
+          padding: 14px 18px;
+        }
+        .player.active {
+          padding: 13px 17px;
+        }
+        .player h2 {
+          font-size: 18px;
+        }
+        .remaining {
+          font-size: 76px;
+          float: left;
+          margin-right: 18px;
+        }
+        .confirmed {
+          display: block;
+          padding-top: 12px;
+        }
+        .player-stats {
+          margin-top: 10px;
+          gap: 10px;
+          padding-top: 8px;
+        }
+        .turn-label {
+          min-height: 18px;
+          font-size: 11px;
+        }
+        #p0 {
+          grid-column: 1;
+          grid-row: 1;
+        }
+        #p1 {
+          grid-column: 2;
+          grid-row: 1;
+        }
+        .input-zone {
+          grid-row: 2;
+          grid-column: 1/-1;
+          max-width: 480px;
+          width: 100%;
+          margin: auto;
+        }
+        .board {
+          width: min(100%, 35vh, 360px);
+        }
+        .visit {
+          gap: 14px;
+          grid-row: 3;
+        }
+        .record-actions {
+          flex-wrap: wrap;
+        }
+        .record-actions .small {
+          padding: 8px 10px;
+        }
+        .match {
+          padding: 16px;
+        }
+        .top {
+          padding: 10px 16px;
+        }
+        .note {
+          margin-top: 16px;
+        }
+      }
+      @media (max-width: 560px) {
+        .top {
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+        .wordmark {
+          font-size: 17px;
+        }
+        .study {
+          display: none;
+        }
+        .top-actions button {
+          font-size: 12px;
+          min-height: 44px;
+          padding: 8px;
+        }
+        .match-bar {
+          margin-bottom: 12px;
+          align-items: start;
+        }
+        .match-bar h1 {
+          font-size: 15px;
+        }
+        .local {
+          font-size: 11px;
+          white-space: nowrap;
+        }
+        .arena {
+          gap: 10px;
+        }
+        .player {
+          padding: 12px;
+        }
+        .player.active {
+          padding: 11px;
+        }
+        .player h2 {
+          font-size: 16px;
+        }
+        .remaining {
+          font-size: 64px;
+          float: none;
+          margin: 3px 0 0;
+        }
+        .confirmed {
+          padding: 0;
+          font-size: 11px;
+        }
+        .player-stats {
+          margin-top: 10px;
+          padding-top: 8px;
+        }
+        .player-stats dt {
+          font-size: 11px;
+        }
+        .player-stats dd {
+          font-size: 13px;
+        }
+        .board {
+          width: min(100%, 31vh, 300px);
+        }
+        .visit {
+          grid-template-columns: 1fr;
+          padding: 12px;
+          gap: 12px;
+          position: sticky;
+          bottom: max(8px, env(safe-area-inset-bottom));
+          box-shadow: var(--shadow);
+          z-index: 2;
+        }
+        .visit-title {
+          margin-bottom: 8px;
+        }
+        .dart {
+          min-width: 44px;
+          min-height: 44px;
+          padding: 8px;
+        }
+        .preview {
+          margin-left: auto;
+          text-align: right;
+        }
+        .record-actions {
+          flex-wrap: nowrap;
+        }
+        .record-actions button.primary {
+          min-height: 52px;
+          font-size: 15px;
+        }
+        .under {
+          align-items: start;
+          flex-wrap: wrap;
+        }
+        .checkout {
+          font-size: 12px;
+        }
+        .segments button {
+          min-height: 48px;
+        }
+        .input-choice {
+          margin-bottom: 8px;
+        }
+        .board-caption {
+          margin: 4px 0;
+        }
+        .note {
+          margin-top: 18px;
+        }
+        .display .player,
+        .display .player.active {
+          padding: 12px;
+        }
+        .display .remaining {
+          font-size: clamp(70px, 22vw, 130px);
+        }
+        .display .player h2 {
+          font-size: 20px;
+        }
+      }
+      @media (min-width: 600px) and (max-height: 600px) {
+        .top {
+          padding: 4px 12px;
+        }
+        .study {
+          display: none;
+        }
+        .match {
+          padding: 8px 12px;
+        }
+        .match-bar {
+          margin-bottom: 8px;
+        }
+        .match-bar h1 {
+          font-size: 13px;
+        }
+        .match-bar p {
+          font-size: 11px;
+          margin-top: 2px;
+        }
+        .arena {
+          grid-template-columns: 150px minmax(200px, 1fr) 150px;
+          gap: 8px;
+          align-items: center;
+        }
+        #p0 {
+          grid-column: 1;
+          grid-row: 1;
+        }
+        #p1 {
+          grid-column: 3;
+          grid-row: 1;
+        }
+        .input-zone {
+          grid-column: 2;
+          grid-row: 1;
+          max-width: none;
+        }
+        .input-choice {
+          margin-bottom: 4px;
+        }
+        .input-choice button {
+          min-height: 44px;
+          padding: 6px;
+        }
+        .board {
+          width: min(100%, 36vh, 180px);
+        }
+        .board-caption {
+          display: none;
+        }
+        .player,
+        .player.active {
+          padding: 10px;
+        }
+        .player.active {
+          padding: 9px;
+        }
+        .player h2 {
+          font-size: 16px;
+          margin: 2px 0;
+        }
+        .remaining {
+          font-size: 58px;
+          float: none;
+          margin: 0;
+        }
+        .confirmed {
+          padding: 0;
+          font-size: 10px;
+        }
+        .player-stats {
+          padding-top: 6px;
+          margin-top: 6px;
+          gap: 6px;
+        }
+        .player-stats dt {
+          font-size: 10px;
+        }
+        .player-stats dd {
+          font-size: 12px;
+          margin-top: 2px;
+        }
+        .turn-label {
+          font-size: 10px;
+          min-height: 16px;
+        }
+        .visit {
+          grid-row: 2;
+          grid-template-columns: 1fr 1fr;
+          padding: 10px 12px;
+          gap: 12px;
+        }
+        .visit-title {
+          margin-bottom: 5px;
+        }
+        .visit-title span {
+          font-size: 10px;
+        }
+        .dart {
+          min-height: 44px;
+          min-width: 44px;
+          padding: 8px;
+        }
+        .record-actions .small {
+          font-size: 11px;
+          padding: 8px;
+        }
+        .record-actions button.primary {
+          min-height: 48px;
+          font-size: 14px;
+        }
+        .under {
+          margin-top: 8px;
+        }
+        .segments {
+          gap: 4px;
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+        }
+        .segments button {
+          min-height: 44px;
+          padding: 4px;
+        }
+        .multiplier,
+        .extras {
+          margin: 4px 0;
+          gap: 4px;
+        }
+        .multiplier button,
+        .extras button {
+          min-height: 44px;
+          padding: 4px;
+          font-size: 12px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          scroll-behavior: auto !important;
+        }
+      }
+      @media (forced-colors: active) {
+        .player.active,
+        .dart.chosen {
+          outline: 3px solid Highlight;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <span class="brand-symbol" aria-hidden="true">◎</span
+      ><span class="wordmark">Darts Master</span
+      ><span class="study">Match design study</span>
+      <div class="top-actions">
+        <button id="theme">Light view</button
+        ><button id="display" aria-pressed="false">Score display</button>
+      </div>
+    </header>
+    <main class="match">
+      <div class="match-bar">
+        <div>
+          <h1>Local 501 · First to 3 legs</h1>
+          <p>Straight in · Double out · Leg 1</p>
+        </div>
+        <span class="local">Sample match</span>
+      </div>
+      <div class="arena">
+        <article class="player active" id="p0" aria-label="Alex score">
+          <span class="turn-label">▶ Alex to throw</span>
+          <h2>Alex</h2>
+          <div class="remaining">81</div>
+          <span class="confirmed">Confirmed remaining</span>
+          <dl class="player-stats">
+            <div>
+              <dt>Legs</dt>
+              <dd>0</dd>
+            </div>
+            <div>
+              <dt>Average</dt>
+              <dd>140.00</dd>
+            </div>
+          </dl>
+        </article>
+        <section class="input-zone" aria-label="Score input">
+          <div class="input-choice" role="group" aria-label="Input method">
+            <button id="board-mode" aria-pressed="true">Dartboard</button
+            ><button id="segment-mode" aria-pressed="false">
+              Large buttons
+            </button>
+          </div>
+          <div id="board-area">
+            <svg
+              class="board"
+              id="board"
+              viewBox="0 0 440 440"
+              aria-label="Illustrated dartboard: segment selection, not measured dart locations"
+            ></svg>
+            <p class="board-caption">Tap a segment · or use Large buttons</p>
+          </div>
+          <div id="segment-area" hidden>
+            <div class="multiplier" role="group" aria-label="Multiplier">
+              <button data-m="1" aria-pressed="true">Single</button
+              ><button data-m="2" aria-pressed="false">Double</button
+              ><button data-m="3" aria-pressed="false">Treble</button>
+            </div>
+            <div class="segments" id="segments"></div>
+            <div class="extras">
+              <button data-extra="25">25</button
+              ><button data-extra="50">Bull</button
+              ><button data-extra="0">Miss</button>
+            </div>
+          </div>
+        </section>
+        <article class="player" id="p1" aria-label="Sam score">
+          <span class="turn-label">Waiting</span>
+          <h2>Sam</h2>
+          <div class="remaining">124</div>
+          <span class="confirmed">Confirmed remaining</span>
+          <dl class="player-stats">
+            <div>
+              <dt>Legs</dt>
+              <dd>0</dd>
+            </div>
+            <div>
+              <dt>Average</dt>
+              <dd>125.67</dd>
+            </div>
+          </dl>
+        </article>
+        <section class="visit" aria-label="Current visit">
+          <div>
+            <div class="visit-title">
+              <strong id="draft-title">Alex’s visit</strong
+              ><span>Not recorded yet</span>
+            </div>
+            <div class="dart-row">
+              <span class="dart chosen">T19</span><span class="dart">—</span
+              ><span class="dart">—</span>
+              <div class="preview">
+                <span>Remaining after visit</span
+                ><strong id="preview">24</strong>
+              </div>
+            </div>
+          </div>
+          <div class="record-actions">
+            <button id="remove" class="small">Remove dart</button
+            ><button id="record" class="primary">Record 57 points</button>
+          </div>
+        </section>
+      </div>
+      <div class="under">
+        <div class="checkout">
+          Suggested finish <strong id="checkout">D12</strong>
+        </div>
+        <div class="minor">
+          <button id="undo" disabled>Undo last visit</button
+          ><button id="reset">Reset sample</button
+          ><a href="/#/play">Back to app</a>
+        </div>
+      </div>
+      <p class="notice" id="message" role="status" aria-live="polite"></p>
+      <p class="note">
+        Interactive design study · sample scores only. Nothing here changes your
+        saved matches. The colour direction is provisional; this is a layout and
+        usability review, not the finished brand.
+      </p>
+      <details class="support">
+        <summary>What this study is testing</summary>
+        <p>
+          Same game state across phone, tablet and laptop. Large confirmed
+          scores; an active player identified by words and border; a separate
+          unrecorded visit; reachable touch controls; light and dark views; and
+          a larger read-only score display. This sample uses the app’s X01 rules
+          for scoring, including busts and finishes. No accounts, cameras,
+          online rooms or device compatibility are claimed.
+        </p>
+        <p>
+          Research:
+          <a href="https://docs.autodarts.com/getting-started/first-game/"
+            >current Autodarts</a
+          >
+          ·
+          <a href="https://dartcounter.net/darts-manual/omni-auto-scoring"
+            >Target OMNI / DartCounter</a
+          >
+          · <a href="https://scoliadarts.com/software/">Scolia</a>.
+        </p>
+      </details>
+    </main>
+    <script type="module">
+      import { replay, checkoutRoute, playerStats } from '/src/domain/match.ts';
+      import { evaluateDarts, dartLabel } from '/src/domain/darts.ts';
+      const fixture = {
+        version: 1,
+        setup: { players: ['Alex', 'Sam'], start: 501, legsToWin: 3 },
+        commands: [180, 180, 180, 140, 60, 57].map((total) => ({
+          type: 'visit',
+          visit: { total, darts: 3, double: false },
+        })),
+      };
+      let session = structuredClone(fixture),
+        hits = [{ number: 19, multiplier: 3 }],
+        multiplier = 1;
+      const $ = (id) => document.getElementById(id);
+      const ns = 'http://www.w3.org/2000/svg';
+      const numbers = [
+        20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5,
+      ];
+      function point(radius, angle) {
+        const r = (angle * Math.PI) / 180;
+        return [220 + radius * Math.sin(r), 220 - radius * Math.cos(r)];
+      }
+      function add(hit) {
+        const match = replay(session);
+        if (
+          hits.length < 3 &&
+          evaluateDarts(match.scores[match.turn], hits).status === 'scoring' &&
+          match.legWinner === null &&
+          match.winner === null
+        ) {
+          hits.push(hit);
+          $('message').textContent = '';
+          render();
+        }
+      }
+      function target(el, hit, label) {
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+        el.setAttribute('aria-label', label);
+        el.addEventListener('click', () => add(hit));
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            add(hit);
+          }
+        });
+      }
+      const bg = document.createElementNS(ns, 'circle');
+      bg.setAttribute('cx', '220');
+      bg.setAttribute('cy', '220');
+      bg.setAttribute('r', '214');
+      bg.setAttribute('fill', '#111716');
+      $('board').append(bg);
+      for (let i = 0; i < 20; i++) {
+        for (const [inner, outer, m] of [
+          [15, 96, 1],
+          [96, 108, 3],
+          [108, 162, 1],
+          [162, 175, 2],
+        ]) {
+          const angle = i * 18,
+            a = point(outer, angle - 9),
+            b = point(outer, angle + 9),
+            c = point(inner, angle + 9),
+            d = point(inner, angle - 9);
+          const path = document.createElementNS(ns, 'path');
+          path.setAttribute(
+            'd',
+            `M${a} A${outer},${outer} 0 0 1 ${b} L${c} A${inner},${inner} 0 0 0 ${d} Z`,
+          );
+          path.setAttribute(
+            'fill',
+            m === 1
+              ? i % 2
+                ? '#e1d8bd'
+                : '#27302d'
+              : i % 2
+                ? '#3b8068'
+                : '#ba514d',
+          );
+          path.setAttribute('stroke', '#89958b');
+          path.setAttribute('stroke-width', '.8');
+          target(
+            path,
+            { number: numbers[i], multiplier: m },
+            `${['', 'Single', 'Double', 'Treble'][m]} ${numbers[i]}`,
+          );
+          $('board').append(path);
+        }
+        const text = document.createElementNS(ns, 'text');
+        const [x, y] = point(194, i * 18);
+        text.setAttribute('x', x);
+        text.setAttribute('y', y + 6);
+        text.setAttribute('text-anchor', 'middle');
+        text.textContent = numbers[i];
+        $('board').append(text);
+      }
+      for (const [radius, m, color] of [
+        [15, 1, '#3b8068'],
+        [6, 2, '#ba514d'],
+      ]) {
+        const c = document.createElementNS(ns, 'circle');
+        c.setAttribute('cx', '220');
+        c.setAttribute('cy', '220');
+        c.setAttribute('r', radius);
+        c.setAttribute('fill', color);
+        target(
+          c,
+          { number: 25, multiplier: m },
+          m === 1 ? 'Outer bull' : 'Bull',
+        );
+        $('board').append(c);
+      }
+      for (let n = 1; n <= 20; n++) {
+        const b = document.createElement('button');
+        b.textContent = n;
+        b.onclick = () => add({ number: n, multiplier });
+        $('segments').append(b);
+      }
+      document.querySelectorAll('[data-m]').forEach(
+        (b) =>
+          (b.onclick = () => {
+            multiplier = Number(b.dataset.m);
+            document
+              .querySelectorAll('[data-m]')
+              .forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+          }),
+      );
+      document.querySelectorAll('[data-extra]').forEach(
+        (b) =>
+          (b.onclick = () => {
+            const n = Number(b.dataset.extra);
+            add({ number: n === 50 ? 25 : n, multiplier: n === 50 ? 2 : 1 });
+          }),
+      );
+      function mode(board) {
+        $('board-area').hidden = !board;
+        $('segment-area').hidden = board;
+        $('board-mode').setAttribute('aria-pressed', String(board));
+        $('segment-mode').setAttribute('aria-pressed', String(!board));
+      }
+      $('board-mode').onclick = () => mode(true);
+      $('segment-mode').onclick = () => mode(false);
+      $('theme').onclick = () => {
+        const light = document.documentElement.dataset.theme !== 'light';
+        document.documentElement.dataset.theme = light ? 'light' : 'dark';
+        $('theme').textContent = light ? 'Dark view' : 'Light view';
+      };
+      $('display').onclick = () => {
+        const active = document.body.classList.toggle('display');
+        $('display').setAttribute('aria-pressed', String(active));
+        $('display').textContent = active
+          ? 'Scoring controls'
+          : 'Score display';
+      };
+      $('remove').onclick = () => {
+        hits.pop();
+        render();
+      };
+      $('record').onclick = () => {
+        const match = replay(session),
+          r = evaluateDarts(match.scores[match.turn], hits);
+        if (!hits.length) return;
+        session.commands.push({
+          type: 'visit',
+          visit: {
+            total: r.total,
+            darts: hits.length,
+            double: r.double,
+            hits: structuredClone(hits),
+          },
+        });
+        hits = [];
+        render();
+        const next = replay(session);
+        $('message').textContent =
+          next.winner !== null
+            ? `${next.setup.players[next.winner]} wins the sample match.`
+            : next.legWinner !== null
+              ? `${next.setup.players[next.legWinner]} wins the sample leg. Reset the sample to try again.`
+              : `Visit recorded in this sample. ${next.setup.players[next.turn]} to throw.`;
+      };
+      $('undo').onclick = () => {
+        if (hits.length) {
+          $('message').textContent =
+            'Remove the unrecorded darts before undoing a visit.';
+          return;
+        }
+        if (session.commands.length > fixture.commands.length)
+          session.commands.pop();
+        render();
+        $('message').textContent = 'Last sample visit undone.';
+      };
+      $('reset').onclick = () => {
+        session = structuredClone(fixture);
+        hits = [{ number: 19, multiplier: 3 }];
+        $('message').textContent =
+          'Sample reset. Your saved matches are unchanged.';
+        render();
+      };
+      function render() {
+        const match = replay(session),
+          r = evaluateDarts(match.scores[match.turn] || 2, hits);
+        for (let i = 0; i < 2; i++) {
+          const p = $(`p${i}`);
+          p.classList.toggle('active', match.turn === i);
+          p.querySelector('.turn-label').textContent =
+            match.legWinner === i
+              ? 'Leg won'
+              : match.turn === i
+                ? '▶ ' + match.setup.players[i] + ' to throw'
+                : 'Waiting';
+          p.querySelector('.remaining').textContent = match.scores[i];
+          p.querySelectorAll('dd')[0].textContent = match.legs[i];
+          p.querySelectorAll('dd')[1].textContent = playerStats(
+            match,
+            i,
+          ).average;
+        }
+        $('draft-title').textContent =
+          match.setup.players[match.turn] + '’s visit';
+        document.querySelectorAll('.dart').forEach((d, i) => {
+          d.textContent = hits[i] ? dartLabel(hits[i]) : '—';
+          d.classList.toggle('chosen', !!hits[i]);
+        });
+        $('preview').textContent =
+          r.status === 'bust'
+            ? `${match.scores[match.turn]} · Bust`
+            : r.remaining;
+        $('record').textContent =
+          r.status === 'bust'
+            ? 'Record bust'
+            : r.status === 'checkout'
+              ? 'Confirm game shot'
+              : `Record ${r.total} points`;
+        $('record').disabled = !hits.length || match.legWinner !== null;
+        $('remove').disabled = !hits.length;
+        $('undo').disabled =
+          session.commands.length <= fixture.commands.length || hits.length > 0;
+        const route = checkoutRoute(r.remaining, 3 - hits.length);
+        $('checkout').textContent =
+          r.status === 'checkout'
+            ? 'Game shot'
+            : r.status === 'bust'
+              ? 'Visit bust'
+              : route?.join(' · ') || 'No finish this visit';
+      }
+      render();
+    </script>
+  </body>
+</html>
