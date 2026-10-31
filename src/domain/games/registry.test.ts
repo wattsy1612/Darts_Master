@@ -65,7 +65,7 @@ describe('typed game plugin contract', () => {
       ).toThrow();
     }
   });
-  it('keeps the Cricket preview out of accepted-game and public restore choices', () => {
+  it('keeps Cricket release acceptance separate from versioned file restore', () => {
     expect(playableGames().map((g) => g.id)).toEqual(['x01']);
     expect(gameRegistry.cricket.playable).toBe(false);
     expect(() => normaliseSession(cricket)).toThrow(/Cricket/);

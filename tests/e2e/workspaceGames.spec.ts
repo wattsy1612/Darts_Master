@@ -181,6 +181,9 @@ test('a stored Cricket current game resumes without rewriting its saved record',
     0,
   );
   expect(await stored(page, 'current')).toEqual(workspace);
+  await page
+    .getByRole('button', { name: 'Data & backups', exact: true })
+    .click();
   const download = page.waitForEvent('download');
   await page
     .getByRole('button', { name: 'Download full backup', exact: false })

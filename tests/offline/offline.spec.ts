@@ -406,7 +406,33 @@ test('Cricket reopens offline, explicitly restores its draft and saves a segment
     >(page);
   expect(stored?.data.current?.game).toBe('cricket');
   expect(stored?.data.current?.commands).toHaveLength(1);
+  await page
+    .getByRole('button', { name: 'Data & backups', exact: true })
+    .click();
   await expect(
     page.getByRole('heading', { name: 'Ready for offline play.' }),
   ).toBeVisible();
+  const download = page.waitForEvent('download');
+  await page
+    .getByRole('button', { name: 'Download full backup', exact: false })
+    .click();
+  const { readFile } = await import('node:fs/promises');
+  const text = await readFile((await (await download).path())!, 'utf8');
+  await page
+    .getByLabel('Choose backup file')
+    .setInputFiles({
+      name: 'offline-cricket.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(text),
+    });
+  await expect(
+    page.getByRole('heading', { name: 'Import preview', exact: true }),
+  ).toBeVisible();
+  expect(
+    (
+      await readWorkspace<
+        import('../../src/domain/games/cricket').CricketSession
+      >(page)
+    )?.data.current?.commands,
+  ).toHaveLength(1);
 });

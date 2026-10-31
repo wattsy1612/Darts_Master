@@ -65,15 +65,7 @@ export function backupText(data: WorkspaceData, notes: string[] = []): string {
     2,
   );
 }
-export function inspectBackup(text: string): IncomingBackup<Session>;
-export function inspectBackup(
-  text: string,
-  options: { allowUnavailableGames: true },
-): IncomingBackup<GameRecord>;
-export function inspectBackup(
-  text: string,
-  options?: { allowUnavailableGames?: boolean },
-): IncomingBackup<GameRecord> {
+export function inspectBackup(text: string): IncomingBackup<GameRecord> {
   if (new TextEncoder().encode(text).byteLength > maxBackupBytes)
     throw new Error('Choose a backup smaller than 20 MB.');
   let input: Record<string, unknown>;
@@ -96,10 +88,6 @@ export function inspectBackup(
       typeof inputRecord === 'object' &&
       (inputRecord as { game?: unknown }).game === 'cricket'
     ) {
-      if (!options?.allowUnavailableGames)
-        throw new Error(
-          'Cricket file restore is not enabled yet. Keep this file; no saved data was changed.',
-        );
       if (input.version !== 2)
         throw new Error('Cricket requires backup or match export version 2.');
     }

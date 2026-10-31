@@ -1,3 +1,4 @@
+import { requireX01Session } from './games/identity';
 import { describe, expect, it } from 'vitest';
 import {
   replay,
@@ -132,7 +133,9 @@ describe('replayable match lifecycle', () => {
     const imported = inspectBackup(exportMatch(ended));
     expect(imported.data.current).toBeNull();
     expect(imported.data.archive).toHaveLength(1);
-    expect(replay(imported.data.archive[0].session).status).toBe('abandoned');
+    expect(
+      replay(requireX01Session(imported.data.archive[0].session)).status,
+    ).toBe('abandoned');
   });
   it.each([{ type: 'abandon' }, { type: 'concede', player: 0 }] as Command[])(
     'undo/redo removes and restores terminal outcome $type',

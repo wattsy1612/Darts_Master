@@ -12,7 +12,7 @@ Practice opponents include Rookie, Regular, Sharp and Custom. Custom independent
 
 Match history also supports reviewed earlier-visit corrections, including replay or acknowledged removal of following actions, draft/replacement safeguards and a recoverable pre-correction workspace. See the [correction policy](docs/CORRECTIONS.md) for local limits, recovery and required future online authority.
 
-The [game contract foundation](docs/GAME_CONTRACTS.md) separates X01 and Cricket rules/records. Cricket has a tested domain engine and shared storage/backup support, but is **not a playable app mode** until its playing/history/profile/correction screens and public restore journeys are integrated.
+The [game contract foundation](docs/GAME_CONTRACTS.md) separates X01 and Cricket rules/records. Cricket has a local playing preview, shared storage, public format-2 restore and a game-aware match centre. Full roster/profile/correction integration and device/accessibility release acceptance remain unfinished.
 
 ## Run the app
 
@@ -155,4 +155,4 @@ Future input adapters will translate supported detection events into domain comm
 
 Choose **Set up Cricket** from match setup when there is no unfinished X01 match. Standard two-player Cricket supports marks/points, split bull, exact dart entry, pass, bull-off, legs, pause/resume, concession, undo/redo and rematches. Existing configured Cricket rosters reopen directly. Unrecorded darts use explicit tab-local draft recovery.
 
-Cricket remains an integration preview: new pairs/team setup, public Cricket file restore and full history/profile/correction views are still being connected. Downloaded Cricket backups preserve the data but are not yet accepted by the public file reviewer. The overall product goal and SC-04 acceptance remain open.
+Cricket remains an integration preview. Play, Match history and Data & backups are separate views, with drafts retained while navigating. The match centre browses either game, including Cricket visits/member metrics and exports. Format-2 Cricket and mixed backups now use reviewed public restore with explicit replacement, profile links, duplicates/conflicts and pre-import recovery. New pairs/team setup, cross-match profile records, earlier-visit correction and device/accessibility acceptance remain open.

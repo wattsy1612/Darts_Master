@@ -120,6 +120,7 @@ test('bull-off, exact non-target darts, explicit pass, pause, redo and mobile la
   await expect(
     page.getByRole('heading', { name: 'Player 1 to throw', exact: true }),
   ).toBeVisible();
+  await page.getByText('Other segments (1–14)', { exact: true }).click();
   await page.getByLabel('Other target').selectOption('14');
   await record(page, ['Other double', 'Miss', 'T20']);
   await page
@@ -175,6 +176,9 @@ test('a failed Cricket save retains the screen version and exports independently
   await expect(
     page.getByRole('button', { name: 'Pause Cricket', exact: true }),
   ).toBeDisabled();
+  await page
+    .getByRole('button', { name: 'Data & backups', exact: true })
+    .click();
   const download = page.waitForEvent('download');
   await page
     .getByRole('button', { name: 'Download full backup', exact: false })
@@ -249,11 +253,15 @@ test('excess marks score only while the opponent target is open and dead darts r
   await expect(
     page.getByRole('columnheader', { name: 'Player 1 60 points', exact: true }),
   ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Match history', exact: true })
+    .click();
   await expect(
     page.getByText('Player 1 · Leg 1 · T20 · 0 useful marks · 0 points', {
       exact: true,
     }),
   ).toBeVisible();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
   await page.reload();
   await expect(
     page.getByRole('columnheader', { name: 'Player 1 60 points', exact: true }),

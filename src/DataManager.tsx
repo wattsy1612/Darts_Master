@@ -409,6 +409,7 @@ export default function DataManager({
                     <span>
                       {entry.session.setup.players.join(' vs ')}
                       <small>
+                        {entry.session.game === 'cricket' ? 'Cricket' : 'X01'} ·{' '}
                         {new Date(entry.completedAt).toLocaleDateString()} ·{' '}
                         {replayGame(entry.session).legs.join('–')}
                       </small>

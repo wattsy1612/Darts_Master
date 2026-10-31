@@ -1,3 +1,4 @@
+import { requireX01Session } from './games/identity';
 import { describe, expect, it } from 'vitest';
 import {
   createMatch,
@@ -312,7 +313,9 @@ describe('sets and saved results', () => {
     const imported = inspectBackup(
       backupText({ ...emptyData(), current: session, archive }),
     );
-    expect(replay(imported.data.archive[0].session)).toEqual(result);
+    expect(replay(requireX01Session(imported.data.archive[0].session))).toEqual(
+      result,
+    );
     expect(playerSummary(archive, 'a', false)).toMatchObject({
       wins: 1,
       legsWon: 6,

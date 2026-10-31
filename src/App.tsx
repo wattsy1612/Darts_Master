@@ -1,4 +1,5 @@
 import CricketPlay from './CricketPlay';
+import MatchPageLinks from './ui/MatchPageLinks';
 import { x01RulesVersion } from './domain/games/identity';
 import { previewCorrection } from './domain/correction';
 import { backupText } from './data/backup';
@@ -6,7 +7,7 @@ import type { CorrectionReview } from './VisitCorrection';
 import type { CorrectionInput, CorrectionPolicy } from './domain/correction';
 import { defaultBotSettings } from './domain/botSettings';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import MatchHistory from './MatchHistory';
+import MatchHistory from './GameHistory';
 import DartboardEntry from './DartboardEntry';
 import { dartLabel } from './domain/darts';
 import { botVisit, difficulties } from './domain/bot';
@@ -717,7 +718,7 @@ function DartsApplication({
         </div>
         <div className="sidebar-footer">
           <span className="status-dot" />
-          Development build <span>v0.18</span>
+          Development build <span>v0.19</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -742,26 +743,16 @@ function DartsApplication({
               <details className="workspace-menu">
                 <summary aria-label="Match navigation">☰</summary>
                 <nav aria-label="Match pages">
-                  {(
-                    [
+                  <MatchPageLinks
+                    pages={[
                       ['players', 'Players'],
                       ['history', 'Match history'],
                       ['roadmap', 'What’s next'],
                       ['data', 'Data & backups'],
-                    ] as const
-                  ).map(([route, label]) => (
-                    <button
-                      key={route}
-                      onClick={(e) => {
-                        setTab(route);
-                        e.currentTarget
-                          .closest('details')
-                          ?.removeAttribute('open');
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                    ]}
+                    current={tab}
+                    onNavigate={setTab}
+                  />
                 </nav>
               </details>
             )}
@@ -2041,7 +2032,12 @@ function DartsApplication({
           {tab === 'history' && (
             <MatchHistory
               current={session}
-              archives={archives}
+              archives={[
+                ...archives,
+                ...repository.document.data.archive.filter(
+                  (e) => e.session.game === 'cricket',
+                ),
+              ]}
               correction={
                 correctionsSupported
                   ? {

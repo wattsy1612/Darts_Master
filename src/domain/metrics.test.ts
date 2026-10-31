@@ -1,3 +1,4 @@
+import { requireX01Session } from './games/identity';
 import { describe, expect, it } from 'vitest';
 import { createMatch, recordVisit, replay, playerStats } from './match';
 import type { Session, Visit, Setup } from './match';
@@ -304,7 +305,7 @@ describe('versioned scoring evidence', () => {
     const imported = plan.data.current!;
     expect(imported.imported).toBeDefined();
     const restored = normaliseSession(
-      JSON.parse(exportMatch(imported)).session,
+      JSON.parse(exportMatch(requireX01Session(imported))).session,
     );
     expect(dataCoverage(replay(restored).visits)).toEqual(
       dataCoverage(replay(recorded).visits),

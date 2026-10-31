@@ -280,14 +280,13 @@ describe('shared game persistence, import and recovery', () => {
       /identifier/,
     );
   });
-  it('exports mixed backup version 2, requires the explicit internal gate, and restores atomically', async () => {
+  it('exports and publicly validates mixed backup version 2, then restores atomically', async () => {
     const repo = await open();
     await repo.saveMatch(x01);
     await repo.saveMatch(cricket(undefined, true));
     const text = backupText(repo.document.data);
     expect(JSON.parse(text).version).toBe(2);
-    expect(() => inspectBackup(text)).toThrow(/Cricket file restore is not enabled/);
-    const incoming = inspectBackup(text, { allowUnavailableGames: true }),
+    const incoming = inspectBackup(text),
       plan = buildImportPlan(
         emptyData(),
         incoming,
@@ -311,7 +310,7 @@ describe('shared game persistence, import and recovery', () => {
       version: 2,
       result: { game: 'cricket', metricsVersion: 'cricket-recorded-v1' },
     });
-    const incoming = inspectBackup(text, { allowUnavailableGames: true }),
+    const incoming = inspectBackup(text),
       record = incoming.data.archive[0].session;
     expect(
       record.setup.sides!.flatMap((s) => s.members.map((m) => m.profileId)),
@@ -329,9 +328,7 @@ describe('shared game persistence, import and recovery', () => {
           { id: 'd', name: 'D', createdAt: date },
         ],
       };
-    const incoming = inspectBackup(backupText(data), {
-      allowUnavailableGames: true,
-    });
+    const incoming = inspectBackup(backupText(data));
     const local = {
       ...emptyData(),
       players: [{ id: 'local', name: 'Local', createdAt: date }],

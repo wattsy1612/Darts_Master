@@ -1,3 +1,4 @@
+import { requireX01Session } from './games/identity';
 import { describe, expect, it } from 'vitest';
 import {
   getSides,
@@ -361,9 +362,9 @@ describe('explicit participants and sides', () => {
         s.members.every((m) => m.profileId === null),
       ),
     ).toBe(true);
-    expect(replay(single).visits.map((v) => v.participantId)).toEqual(
-      replay(session).visits.map((v) => v.participantId),
-    );
+    expect(
+      replay(requireX01Session(single)).visits.map((v) => v.participantId),
+    ).toEqual(replay(session).visits.map((v) => v.participantId));
   });
   it('rejects an import preview that links two members to the same saved identity', () => {
     const session = win(),

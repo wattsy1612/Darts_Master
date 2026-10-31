@@ -8,7 +8,7 @@ The application is a local prototype with a larger platform vision. “Darts Mas
 - [UI/UX and branding brief](DESIGN_BRIEF.md): journeys, screens, device layouts, interaction design, accessibility, design system, naming and brand assets.
 - [Feature backlog](FEATURE_BACKLOG.md): feature IDs, dependencies, release intent and acceptance evidence for implementation issues/PRs.
 
-## Available foundation — v0.18
+## Available foundation — v0.19
 
 Local singles, multiplayer, pairs and team rosters with actual thrower records; configurable X01 opening/finishing rules, starts and legs/sets, saved local bull-off, explicit local pause/concession/abandon/rematch, with compact scoring, focus mode, page URLs and an interactive dartboard or keypad; practice opponents; saved matches and export; browser-local player profiles and linked records. Versioned transactional saves, full backups/reviewed imports, exact-turn draft recovery and production offline reopen are implemented. These profiles are not registered accounts. There are no connected camera adapters, cloud accounts or online matches yet.
 
@@ -18,7 +18,7 @@ Versioned local metric definitions, input labels and data-coverage disclosures s
 
 Match history supports reviewed earlier-visit corrections with explicit downstream consequences, atomic current/archive updates and recoverable pre-correction snapshots. Online corrections still require hosted authority and audit work.
 
-A typed game registry, tested Cricket domain and shared transactional storage/backup now prepare the first extra game. Existing workspaces upgrade recoverably. A local Cricket playing preview now supports setup, scoring, drafts, lifecycle and rematches. Public restore, full history/profile/correction integration and complete device/accessibility journeys remain required.
+A typed game registry, tested Cricket domain and shared transactional storage/backup now prepare the first extra game. Existing workspaces upgrade recoverably. A local Cricket playing preview now supports setup, scoring, drafts, lifecycle and rematches. Compact Cricket play, reviewed public restore and game-aware match history are connected. New roster setup, full profiles, earlier-visit correction and complete device/accessibility journeys remain required.
 
 See the [delivery ledger](DELIVERY_STATUS.md) for current implementation and incomplete acceptance gates.
 
